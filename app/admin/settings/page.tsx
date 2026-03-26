@@ -1,0 +1,711 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/hooks/useAuth'
+import { createClient } from '@/lib/supabase'
+import { generatePin } from '@/lib/utils'
+import { useToast } from '@/components/ui/Toast'
+import { logActivity } from '@/lib/activity'
+import type { Profile } from '@/lib/types'
+
+/** Settings page — Staff management (all managers/owners), Café config + API keys + Targets (owner only) */
+export default function SettingsPage() {
+  const { profile, loading } = useAuth()
+  const router = useRouter()
+  const { showToast } = useToast()
+  const [staff, setStaff] = useState<Profile[]>([])
+  const [loadingStaff, setLoadingStaff] = useState(true)
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+
+  // Café config state
+  const [ownerEmail, setOwnerEmail] = useState('')
+  const [cafeDayStart, setCafeDayStart] = useState('05:30')
+  const [cafeDayEnd, setCafeDayEnd] = useState('15:00')
+  const [savingConfig, setSavingConfig] = useState(false)
+  const [loadingConfig, setLoadingConfig] = useState(true)
+
+  // API key state
+  const [claudeKeyConfigured, setClaudeKeyConfigured] = useState(false)
+  const [claudeKeyInput, setClaudeKeyInput] = useState('')
+  const [savingClaudeKey, setSavingClaudeKey] = useState(false)
+  const [showClaudeKeyInput, setShowClaudeKeyInput] = useState(false)
+
+  // Targets state
+  const [targetWaste, setTargetWaste] = useState('50')
+  const [targetTasks, setTargetTasks] = useState('90')
+  const [targetCal, setTargetCal] = useState('100')
+  const [savingTargets, setSavingTargets] = useState(false)
+
+  // Auth guard
+  useEffect(() => {
+    if (!loading && !profile) router.push('/login')
+    if (!loading && profile && profile.role === 'barista') router.push('/')
+  }, [profile, loading, router])
+
+  async function fetchStaff() {
+    const supabase = createClient()
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: true })
+    setStaff(data ?? [])
+    setLoadingStaff(false)
+  }
+
+  /** Fetch owner-only settings on mount */
+  async function fetchOwnerSettings() {
+    const supabase = createClient()
+
+    const { data: settingsData } = await supabase
+      .from('settings')
+      .select('key, value')
+      .in('key', [
+        'owner_email',
+        'cafe_day_start',
+        'cafe_day_end',
+        'target_daily_waste',
+        'target_task_completion',
+        'target_calibration_compliance',
+      ])
+
+    const map: Record<string, string> = {}
+    for (const s of settingsData ?? []) {
+      map[s.key] = s.value
+    }
+
+    if (map['owner_email']) setOwnerEmail(map['owner_email'])
+    if (map['cafe_day_start']) setCafeDayStart(map['cafe_day_start'])
+    if (map['cafe_day_end']) setCafeDayEnd(map['cafe_day_end'])
+    if (map['target_daily_waste']) setTargetWaste(map['target_daily_waste'])
+    if (map['target_task_completion']) setTargetTasks(map['target_task_completion'])
+    if (map['target_calibration_compliance']) setTargetCal(map['target_calibration_compliance'])
+
+    // Check if Claude API key is configured without reading its value
+    const { count } = await supabase
+      .from('settings')
+      .select('*', { count: 'exact', head: true })
+      .eq('key', 'claude_api_key')
+
+    setClaudeKeyConfigured((count ?? 0) > 0)
+    setLoadingConfig(false)
+  }
+
+  useEffect(() => {
+    if (profile) {
+      fetchStaff()
+      if (profile.role === 'owner') fetchOwnerSettings()
+      else setLoadingConfig(false)
+    }
+  }, [profile])
+
+  /** Upsert a single setting key/value */
+  async function upsertSetting(key: string, value: string) {
+    const supabase = createClient()
+    await supabase
+      .from('settings')
+      .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+  }
+
+  /** Save café configuration */
+  async function handleSaveConfig() {
+    if (!profile) return
+    setSavingConfig(true)
+    const supabase = createClient()
+
+    const upserts = [
+      { key: 'owner_email', value: ownerEmail.trim(), updated_at: new Date().toISOString() },
+      { key: 'cafe_day_start', value: cafeDayStart, updated_at: new Date().toISOString() },
+      { key: 'cafe_day_end', value: cafeDayEnd, updated_at: new Date().toISOString() },
+    ]
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert(upserts, { onConflict: 'key' })
+
+    setSavingConfig(false)
+
+    if (error) {
+      showToast(error.message, 'error')
+      return
+    }
+
+    await logActivity(profile.id, 'settings_updated', 'Updated café configuration')
+    showToast('Configuration saved', 'success')
+  }
+
+  /** Save the Claude API key */
+  async function handleSaveClaudeKey() {
+    if (!claudeKeyInput.trim()) {
+      showToast('Enter a valid API key', 'error')
+      return
+    }
+    setSavingClaudeKey(true)
+    await upsertSetting('claude_api_key', claudeKeyInput.trim())
+    setSavingClaudeKey(false)
+    setClaudeKeyConfigured(true)
+    setShowClaudeKeyInput(false)
+    setClaudeKeyInput('')
+    showToast('API key saved', 'success')
+  }
+
+  /** Save performance targets */
+  async function handleSaveTargets() {
+    if (!profile) return
+    const waste = parseFloat(targetWaste)
+    const tasks = parseFloat(targetTasks)
+    const cal = parseFloat(targetCal)
+
+    if (isNaN(waste) || waste < 0) { showToast('Enter a valid waste limit', 'error'); return }
+    if (isNaN(tasks) || tasks < 0 || tasks > 100) { showToast('Tasks target must be 0–100', 'error'); return }
+    if (isNaN(cal) || cal < 0 || cal > 100) { showToast('Calibration target must be 0–100', 'error'); return }
+
+    setSavingTargets(true)
+    const supabase = createClient()
+
+    const upserts = [
+      { key: 'target_daily_waste', value: waste.toString(), updated_at: new Date().toISOString() },
+      { key: 'target_task_completion', value: tasks.toString(), updated_at: new Date().toISOString() },
+      { key: 'target_calibration_compliance', value: cal.toString(), updated_at: new Date().toISOString() },
+    ]
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert(upserts, { onConflict: 'key' })
+
+    setSavingTargets(false)
+
+    if (error) {
+      showToast(error.message, 'error')
+      return
+    }
+
+    showToast('Targets saved', 'success')
+  }
+
+  if (loading || !profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
+        <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  const isOwner = profile.role === 'owner'
+
+  return (
+    <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
+      {/* Header */}
+      <div className="px-5 pt-12 pb-6">
+        <button onClick={() => router.back()} className="text-[#B8960C] text-sm mb-3 flex items-center gap-1">
+          ← Back
+        </button>
+        <h1 className="text-2xl font-bold text-[#1A1A1A]">Settings</h1>
+      </div>
+
+      <div className="px-5 space-y-6">
+
+        {/* ── Staff Management ── */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="section-label">Staff</p>
+            {isOwner && (
+              <button
+                onClick={() => setShowAddForm(v => !v)}
+                className="text-sm font-semibold text-[#B8960C]"
+              >
+                {showAddForm ? 'Cancel' : '+ Add Staff'}
+              </button>
+            )}
+          </div>
+
+          {/* Add staff form */}
+          {showAddForm && isOwner && (
+            <AddStaffForm
+              onSuccess={(name, role) => {
+                setShowAddForm(false)
+                fetchStaff()
+                showToast('Staff member added', 'success')
+                if (profile) logActivity(profile.id, 'staff_added', `Added staff member: ${name} (${role})`)
+              }}
+              onError={(msg) => showToast(msg, 'error')}
+            />
+          )}
+
+          {/* Staff list */}
+          {loadingStaff ? (
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {staff.map(member => (
+                <StaffCard
+                  key={member.id}
+                  member={member}
+                  currentUserId={profile.id}
+                  isOwner={isOwner}
+                  isEditing={editingId === member.id}
+                  onEdit={() => setEditingId(member.id)}
+                  onCancelEdit={() => setEditingId(null)}
+                  onUpdated={() => { setEditingId(null); fetchStaff(); showToast('Updated', 'success') }}
+                  onError={(msg) => showToast(msg, 'error')}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ── Owner-only sections ── */}
+        {isOwner && !loadingConfig && (
+          <>
+            {/* ── Café Configuration ── */}
+            <div>
+              <p className="section-label mb-3">Café Configuration</p>
+              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Owner Email</label>
+                  <input
+                    type="email"
+                    value={ownerEmail}
+                    onChange={e => setOwnerEmail(e.target.value)}
+                    placeholder="owner@example.com"
+                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  />
+                  <p className="text-xs text-gray-400">EOD reports will be emailed to this address</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-gray-700">Café Day Start</label>
+                    <input
+                      type="time"
+                      value={cafeDayStart}
+                      onChange={e => setCafeDayStart(e.target.value)}
+                      className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-sm font-medium text-gray-700">Café Day End</label>
+                    <input
+                      type="time"
+                      value={cafeDayEnd}
+                      onChange={e => setCafeDayEnd(e.target.value)}
+                      className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleSaveConfig}
+                  disabled={savingConfig}
+                  className="w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40"
+                >
+                  {savingConfig ? 'Saving…' : 'Save Configuration'}
+                </button>
+              </div>
+            </div>
+
+            {/* ── API Keys ── */}
+            <div>
+              <p className="section-label mb-3">API Keys</p>
+              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+
+                {/* Claude API Key */}
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="font-medium text-[#1A1A1A] text-sm">Claude API Key</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Used for invoice AI extraction and menu scanning
+                      </p>
+                    </div>
+                    {claudeKeyConfigured && !showClaudeKeyInput && (
+                      <button
+                        onClick={() => setShowClaudeKeyInput(true)}
+                        className="text-sm font-medium text-[#B8960C] shrink-0"
+                      >
+                        Update
+                      </button>
+                    )}
+                  </div>
+
+                  {claudeKeyConfigured && !showClaudeKeyInput ? (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-green-50 rounded-xl">
+                      <span className="text-xs font-medium text-[#16A34A]">API key configured</span>
+                      <span className="text-[#16A34A] text-sm">✓</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={claudeKeyInput}
+                        onChange={e => setClaudeKeyInput(e.target.value)}
+                        placeholder="sk-ant-…"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] font-mono text-sm"
+                      />
+                      <div className="flex gap-2">
+                        {claudeKeyConfigured && (
+                          <button
+                            onClick={() => { setShowClaudeKeyInput(false); setClaudeKeyInput('') }}
+                            className="flex-1 py-2.5 rounded-full border border-gray-200 text-gray-600 text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          onClick={handleSaveClaudeKey}
+                          disabled={savingClaudeKey}
+                          className="flex-1 py-2.5 rounded-full bg-[#B8960C] text-white font-semibold text-sm disabled:opacity-40"
+                        >
+                          {savingClaudeKey ? 'Saving…' : 'Save Key'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100" />
+
+                {/* Xero API Key — placeholder */}
+                <div>
+                  <div className="mb-2">
+                    <p className="font-medium text-gray-400 text-sm">Xero Integration</p>
+                    <p className="text-xs text-gray-300 mt-0.5">Coming soon</p>
+                  </div>
+                  <input
+                    type="text"
+                    disabled
+                    placeholder="Coming soon"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 text-gray-300 text-base cursor-not-allowed"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* ── Performance Targets ── */}
+            <div>
+              <p className="section-label mb-3">Performance Targets</p>
+              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Daily Waste Limit ($)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={targetWaste}
+                    onChange={e => setTargetWaste(e.target.value)}
+                    placeholder="50"
+                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Task Completion Target (%)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    value={targetTasks}
+                    onChange={e => setTargetTasks(e.target.value)}
+                    placeholder="90"
+                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Calibration Compliance Target (%)</label>
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    max="100"
+                    value={targetCal}
+                    onChange={e => setTargetCal(e.target.value)}
+                    placeholder="100"
+                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  />
+                </div>
+                <button
+                  onClick={handleSaveTargets}
+                  disabled={savingTargets}
+                  className="w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40"
+                >
+                  {savingTargets ? 'Saving…' : 'Save Targets'}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+/** Form to add a new staff member */
+function AddStaffForm({
+  onSuccess,
+  onError,
+}: {
+  onSuccess: (name: string, role: string) => void
+  onError: (msg: string) => void
+}) {
+  const [name, setName] = useState('')
+  const [role, setRole] = useState<'barista' | 'manager'>('barista')
+  const [pin, setPin] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit() {
+    if (!name.trim()) { onError('Name is required'); return }
+    if (!/^\d{4,6}$/.test(pin)) { onError('PIN must be 4–6 digits'); return }
+
+    setLoading(true)
+    const res = await fetch('/api/staff', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name.trim(), role, pin }),
+    })
+    setLoading(false)
+
+    if (!res.ok) {
+      const data = await res.json()
+      onError(data.error || 'Failed to add staff')
+      return
+    }
+
+    onSuccess(name.trim(), role)
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm mb-3 space-y-3">
+      <h3 className="font-semibold text-[#1A1A1A]">New Staff Member</h3>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Full name"
+          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">Role</label>
+        <select
+          value={role}
+          onChange={e => setRole(e.target.value as 'barista' | 'manager')}
+          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+        >
+          <option value="barista">Barista</option>
+          <option value="manager">Manager</option>
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">PIN</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={pin}
+            onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+            placeholder="4–6 digits"
+            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          />
+          <button
+            type="button"
+            onClick={() => setPin(generatePin())}
+            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-sm text-[#B8960C] font-medium whitespace-nowrap"
+          >
+            Generate
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={loading}
+        className="w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40"
+      >
+        {loading ? 'Adding…' : 'Add Staff Member'}
+      </button>
+    </div>
+  )
+}
+
+/** Single staff card with inline edit capability */
+function StaffCard({
+  member,
+  currentUserId,
+  isOwner,
+  isEditing,
+  onEdit,
+  onCancelEdit,
+  onUpdated,
+  onError,
+}: {
+  member: Profile
+  currentUserId: string
+  isOwner: boolean
+  isEditing: boolean
+  onEdit: () => void
+  onCancelEdit: () => void
+  onUpdated: () => void
+  onError: (msg: string) => void
+}) {
+  const [name, setName] = useState(member.full_name)
+  const [role, setRole] = useState(member.role)
+  const [pin, setPin] = useState(member.pin)
+  const [isActive, setIsActive] = useState(member.is_active)
+  const [loading, setLoading] = useState(false)
+
+  const isSelf = member.id === currentUserId
+  const roleBadgeColor =
+    member.role === 'owner'
+      ? 'bg-[#B8960C]/10 text-[#B8960C]'
+      : member.role === 'manager'
+      ? 'bg-blue-50 text-blue-600'
+      : 'bg-gray-100 text-gray-500'
+
+  async function handleUpdate() {
+    if (!name.trim()) { onError('Name is required'); return }
+    if (!/^\d{4,6}$/.test(pin)) { onError('PIN must be 4–6 digits'); return }
+
+    setLoading(true)
+    const res = await fetch(`/api/staff/${member.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name.trim(),
+        role: isSelf ? undefined : role, // can't change own role
+        pin,
+        is_active: isSelf ? undefined : isActive,
+      }),
+    })
+    setLoading(false)
+
+    if (!res.ok) {
+      const data = await res.json()
+      onError(data.error || 'Update failed')
+      return
+    }
+
+    onUpdated()
+  }
+
+  if (!isEditing) {
+    return (
+      <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#B8960C]/10 flex items-center justify-center">
+              <span className="text-[#B8960C] font-bold text-sm">
+                {member.full_name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <p className="font-semibold text-[#1A1A1A]">{member.full_name}</p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadgeColor}`}>
+                  {member.role}
+                </span>
+                {!member.is_active && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-500 font-medium">
+                    Inactive
+                  </span>
+                )}
+                <span className="text-xs text-gray-400">PIN: {'•'.repeat(member.pin.length)}</span>
+              </div>
+            </div>
+          </div>
+          {isOwner && (
+            <button onClick={onEdit} className="text-[#B8960C] text-sm font-medium">
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border-2 border-[#B8960C]/20">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-[#1A1A1A]">Edit {member.full_name}</h3>
+        <button onClick={onCancelEdit} className="text-gray-400 text-sm">Cancel</button>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+        />
+      </div>
+
+      {!isSelf && (
+        <div className="flex flex-col gap-1">
+          <label className="text-sm font-medium text-gray-700">Role</label>
+          <select
+            value={role}
+            onChange={e => setRole(e.target.value as Profile['role'])}
+            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          >
+            <option value="barista">Barista</option>
+            <option value="manager">Manager</option>
+          </select>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-700">PIN</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            inputMode="numeric"
+            maxLength={6}
+            value={pin}
+            onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
+            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          />
+          <button
+            type="button"
+            onClick={() => setPin(generatePin())}
+            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-sm text-[#B8960C] font-medium whitespace-nowrap"
+          >
+            Generate
+          </button>
+        </div>
+      </div>
+
+      {!isSelf && (
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <p className="font-medium text-[#1A1A1A] text-sm">Active</p>
+            <p className="text-xs text-gray-400">Inactive staff cannot log in</p>
+          </div>
+          <button
+            onClick={() => setIsActive(v => !v)}
+            className={`w-12 h-6 rounded-full transition-colors relative ${isActive ? 'bg-[#16A34A]' : 'bg-gray-200'}`}
+          >
+            <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-all ${isActive ? 'left-7' : 'left-1'}`} />
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={handleUpdate}
+        disabled={loading}
+        className="w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40"
+      >
+        {loading ? 'Saving…' : 'Save Changes'}
+      </button>
+    </div>
+  )
+}
