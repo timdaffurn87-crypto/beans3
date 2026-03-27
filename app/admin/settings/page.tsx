@@ -234,6 +234,7 @@ export default function SettingsPage() {
                 if (profile) logActivity(profile.id, 'staff_added', `Added staff member: ${name} (${role})`)
               }}
               onError={(msg) => showToast(msg, 'error')}
+              isOwner={isOwner}
             />
           )}
 
@@ -468,12 +469,14 @@ export default function SettingsPage() {
 function AddStaffForm({
   onSuccess,
   onError,
+  isOwner,
 }: {
   onSuccess: (name: string, role: string) => void
   onError: (msg: string) => void
+  isOwner: boolean
 }) {
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'barista' | 'manager'>('barista')
+  const [role, setRole] = useState<'barista' | 'manager' | 'owner'>('barista')
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -517,11 +520,12 @@ function AddStaffForm({
         <label className="text-sm font-medium text-gray-700">Role</label>
         <select
           value={role}
-          onChange={e => setRole(e.target.value as 'barista' | 'manager')}
+          onChange={e => setRole(e.target.value as 'barista' | 'manager' | 'owner')}
           className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
         >
           <option value="barista">Barista</option>
           <option value="manager">Manager</option>
+          {isOwner && <option value="owner">Owner</option>}
         </select>
       </div>
 
@@ -680,6 +684,7 @@ function StaffCard({
           >
             <option value="barista">Barista</option>
             <option value="manager">Manager</option>
+            {isOwner && <option value="owner">Owner</option>}
           </select>
         </div>
       )}
