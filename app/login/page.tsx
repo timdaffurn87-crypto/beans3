@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase'
 import { signInWithPin } from '@/lib/auth'
 import { cn } from '@/lib/cn'
 
@@ -16,15 +15,19 @@ export default function LoginPage() {
   const [checkingFirstLaunch, setCheckingFirstLaunch] = useState(true)
   const router = useRouter()
 
-  // Check if any staff exist (first launch detection)
+  // Check if any staff exist (first launch detection).
+  // Uses the API route so the check runs with service role and bypasses RLS —
+  // the profiles table is only readable by authenticated users, so a direct
+  // client-side query from an unauthenticated visitor would always return 0.
   useEffect(() => {
     async function checkFirstLaunch() {
-      const supabase = createClient()
-      const { count } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-
-      setIsFirstLaunch(count === 0)
+      try {
+        const res = await fetch('/api/setup')
+        const data = await res.json()
+        setIsFirstLaunch(data.isFirstLaunch === true)
+      } catch {
+        setIsFirstLaunch(false)
+      }
       setCheckingFirstLaunch(false)
     }
     checkFirstLaunch()
