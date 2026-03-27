@@ -7,9 +7,29 @@ const DEFAULT_START = '05:30'
 // Australian Eastern Time offset (+10 or +11 for DST — use a fixed offset approach)
 // We'll use the 'Australia/Sydney' timezone via Intl.DateTimeFormat
 
-/** Returns the current time as a Date in Australian Eastern Time */
+/**
+ * Returns the current time as a Date in Australian Eastern Time.
+ * Uses Intl.DateTimeFormat.formatToParts for reliable cross-environment parsing
+ * instead of new Date(toLocaleString()), which produces unparseable strings on some systems.
+ */
 export function getNowAEST(): Date {
-  return new Date(new Date().toLocaleString('en-AU', { timeZone: 'Australia/Sydney' }))
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-AU', {
+    timeZone: 'Australia/Sydney',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+
+  const get = (type: string): number =>
+    parseInt(parts.find(p => p.type === type)?.value ?? '0', 10)
+
+  // Construct a plain Date using Sydney local time parts (no timezone shift applied)
+  return new Date(get('year'), get('month') - 1, get('day'), get('hour'), get('minute'), get('second'))
 }
 
 /** Parses a time string like "05:30" into { hours, minutes } */

@@ -23,6 +23,7 @@ export default function SettingsPage() {
   const [ownerEmail, setOwnerEmail] = useState('')
   const [cafeDayStart, setCafeDayStart] = useState('05:30')
   const [cafeDayEnd, setCafeDayEnd] = useState('15:00')
+  const [tillFloat, setTillFloat] = useState('200.00')
   const [savingConfig, setSavingConfig] = useState(false)
   const [loadingConfig, setLoadingConfig] = useState(true)
 
@@ -65,6 +66,7 @@ export default function SettingsPage() {
         'owner_email',
         'cafe_day_start',
         'cafe_day_end',
+        'till_float',
         'target_daily_waste',
         'target_task_completion',
         'target_calibration_compliance',
@@ -78,6 +80,7 @@ export default function SettingsPage() {
     if (map['owner_email']) setOwnerEmail(map['owner_email'])
     if (map['cafe_day_start']) setCafeDayStart(map['cafe_day_start'])
     if (map['cafe_day_end']) setCafeDayEnd(map['cafe_day_end'])
+    if (map['till_float']) setTillFloat(map['till_float'])
     if (map['target_daily_waste']) setTargetWaste(map['target_daily_waste'])
     if (map['target_task_completion']) setTargetTasks(map['target_task_completion'])
     if (map['target_calibration_compliance']) setTargetCal(map['target_calibration_compliance'])
@@ -118,6 +121,7 @@ export default function SettingsPage() {
       { key: 'owner_email', value: ownerEmail.trim(), updated_at: new Date().toISOString() },
       { key: 'cafe_day_start', value: cafeDayStart, updated_at: new Date().toISOString() },
       { key: 'cafe_day_end', value: cafeDayEnd, updated_at: new Date().toISOString() },
+      { key: 'till_float', value: (parseFloat(tillFloat) || 0).toFixed(2), updated_at: new Date().toISOString() },
     ]
 
     const { error } = await supabase
@@ -293,6 +297,23 @@ export default function SettingsPage() {
                       value={cafeDayEnd}
                       onChange={e => setCafeDayEnd(e.target.value)}
                       className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-sm font-medium text-gray-700">Till Float</label>
+                  <p className="text-xs text-gray-400">Opening cash in the till each day. EOD auto-flags a discrepancy if cash count doesn&apos;t match.</p>
+                  <div className="relative mt-1">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={tillFloat}
+                      onChange={e => setTillFloat(e.target.value)}
+                      placeholder="200.00"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
                     />
                   </div>
                 </div>

@@ -104,16 +104,36 @@ export default function EODPage() {
   const [submitted, setSubmitted] = useState(false) // shows success screen
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false)
 
+  // Till balance
+  const [cashTotal, setCashTotal] = useState('')
+  const [eftposTotal, setEftposTotal] = useState('')
+  const [hasDiscrepancy, setHasDiscrepancy] = useState(false)
+  const [discrepancyReason, setDiscrepancyReason] = useState('')
+  const [tillFloat, setTillFloat] = useState<number | null>(null)
+
   // Auth guard
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
   }, [profile, loading, router])
 
+  // Auto-flag discrepancy when cash count deviates from the float
+  useEffect(() => {
+    if (tillFloat === null || cashTotal === '') return
+    const variance = parseFloat(cashTotal) - tillFloat
+    // Flag if variance is more than $0.01 (i.e. any mismatch)
+    if (Math.abs(variance) > 0.01) {
+      setHasDiscrepancy(true)
+    } else {
+      setHasDiscrepancy(false)
+      setDiscrepancyReason('')
+    }
+  }, [cashTotal, tillFloat])
+
   /** Load all café-day data needed for the EOD summary */
   async function fetchDayData() {
     const supabase = createClient()
 
-    const [tasksRes, wasteRes, calRes, invoicesRes, eodRes] = await Promise.all([
+    const [tasksRes, wasteRes, calRes, invoicesRes, eodRes, floatRes] = await Promise.all([
       supabase.from('daily_tasks').select('*').eq('cafe_day', cafeDay),
       supabase.from('waste_logs').select('*').eq('cafe_day', cafeDay),
       supabase
@@ -127,14 +147,19 @@ export default function EODPage() {
         .select('id')
         .eq('cafe_day', cafeDay)
         .single(),
+      supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'till_float')
+        .single(),
     ])
 
     setTasks((tasksRes.data as DailyTask[]) ?? [])
     setWasteLogs((wasteRes.data as WasteLog[]) ?? [])
     setCalibrationRows((calRes.data as CalibrationRow[]) ?? [])
     setInvoices((invoicesRes.data as Invoice[]) ?? [])
-    // .single() returns an error if no row — treat that as "not submitted"
     setAlreadySubmitted(!!eodRes.data)
+    if (floatRes.data?.value) setTillFloat(parseFloat(floatRes.data.value))
     setLoadingData(false)
   }
 
@@ -161,7 +186,17 @@ export default function EODPage() {
     const supabase = createClient()
 
     try {
-      // 1. Save the EOD report
+      // 1. Build notes — append till balance data if entered
+      let fullNotes = notes.trim()
+      if (tillEntered) {
+        const tillNote = [
+          `TILL BALANCE — Cash: ${formatCurrency(cashNum)} | EFTPOS: ${formatCurrency(eftposNum)} | Total: ${formatCurrency(tillTotal)}`,
+          hasDiscrepancy ? `DISCREPANCY: ${discrepancyReason.trim() || 'No reason given'}` : 'Status: Balanced',
+        ].join('\n')
+        fullNotes = fullNotes ? `${fullNotes}\n\n${tillNote}` : tillNote
+      }
+
+      // 2. Save the EOD report
       const reportPayload = {
         submitted_by: profile.id,
         cafe_day: cafeDay,
@@ -175,7 +210,7 @@ export default function EODPage() {
         invoices_count: invoicesCount,
         invoices_total_value: invoicesTotalValue,
         invoice_ids: invoiceIds,
-        notes: notes.trim() || null,
+        notes: fullNotes || null,
       }
 
       const { error: insertError } = await supabase
@@ -238,6 +273,27 @@ export default function EODPage() {
   const invoicesCount = invoices.length
   const invoicesTotalValue = invoices.reduce((sum, i) => sum + i.total_amount, 0)
   const invoiceIds = invoices.map(i => i.id)
+
+  // ─── Till balance computed values ────────────────────────────────────────
+  // How this works:
+  // - The float is the opening cash (set in Settings). It stays in the till all day.
+  // - Cash sales accumulate in the till on top of the float during the shift.
+  // - At EOD, staff remove cash sales to the safe, leaving only the float.
+  // - Cash Counted = what's physically in the till at close (should equal float).
+  // - Cash Sales = Cash Counted − Float (what was taken today before banking).
+  //   NOTE: if the café banks mid-shift, Cash Counted may equal Float already.
+  //   We use Cash Counted directly for Total Takings alongside EFTPOS.
+  // - Variance = Cash Counted − Float → anything non-zero is a discrepancy.
+  const cashNum = parseFloat(cashTotal) || 0
+  const eftposNum = parseFloat(eftposTotal) || 0
+  const cashSales = tillFloat !== null && cashTotal !== '' ? Math.max(0, cashNum - tillFloat) : cashNum
+  // Total Takings = cash sales (cash above float) + EFTPOS
+  const tillTotal = (tillFloat !== null && cashTotal !== '' ? cashSales : cashNum) + eftposNum
+  const tillEntered = cashTotal !== '' || eftposTotal !== ''
+  // Variance: how much cash counted differs from the expected float
+  const cashVariance = tillFloat !== null && cashTotal !== '' ? cashNum - tillFloat : null
+  // True discrepancy: variance exists and is non-zero (beyond rounding)
+  const tillIsDiscrepancy = cashVariance !== null && Math.abs(cashVariance) > 0.01
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -524,6 +580,132 @@ export default function EODPage() {
           {invoicesCount === 0 && (
             <p className="text-sm text-gray-400">No invoices scanned today</p>
           )}
+        </div>
+
+        {/* ── Till Balance ── */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm">
+          <p className="section-label mb-3">Till Balance</p>
+
+          <div className="space-y-3">
+
+            {/* Float reference row */}
+            {tillFloat !== null && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50">
+                <span className="text-sm text-gray-500">Expected float (opening cash)</span>
+                <span className="text-sm font-semibold text-[#1A1A1A]">{formatCurrency(tillFloat)}</span>
+              </div>
+            )}
+
+            {/* Cash Counted input */}
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
+                Cash Counted
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={cashTotal}
+                  onChange={e => setCashTotal(e.target.value)}
+                  placeholder={tillFloat !== null ? tillFloat.toFixed(2) : '0.00'}
+                  className={`w-full pl-7 pr-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 bg-[#FAF8F3] ${
+                    tillIsDiscrepancy
+                      ? 'border-[#DC2626] focus:ring-[#DC2626]'
+                      : 'border-gray-200 focus:ring-[#B8960C]'
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Cash calculation breakdown — shown once cash is entered */}
+            {cashTotal !== '' && tillFloat !== null && (
+              <div className="rounded-xl border border-gray-100 overflow-hidden">
+                {/* Cash Sales line */}
+                <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
+                  <span className="text-sm text-gray-600">
+                    Cash Sales <span className="text-xs text-gray-400">({formatCurrency(cashNum)} − {formatCurrency(tillFloat)} float)</span>
+                  </span>
+                  <span className="text-sm font-semibold text-[#1A1A1A]">{formatCurrency(cashSales)}</span>
+                </div>
+                {/* Variance line */}
+                <div className={`flex items-center justify-between px-3 py-2 ${
+                  !tillIsDiscrepancy
+                    ? 'bg-green-50'
+                    : cashVariance! > 0
+                    ? 'bg-amber-50'
+                    : 'bg-red-50'
+                }`}>
+                  <span className={`text-sm font-semibold ${
+                    !tillIsDiscrepancy
+                      ? 'text-[#16A34A]'
+                      : cashVariance! > 0
+                      ? 'text-[#D97706]'
+                      : 'text-[#DC2626]'
+                  }`}>
+                    {!tillIsDiscrepancy
+                      ? '✓ Balanced'
+                      : cashVariance! > 0
+                      ? `OVER  +${formatCurrency(cashVariance!)}`
+                      : `SHORT  −${formatCurrency(Math.abs(cashVariance!))}`}
+                  </span>
+                  <span className="text-xs text-gray-400">cash variance</span>
+                </div>
+              </div>
+            )}
+
+            {/* EFTPOS input */}
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
+                EFTPOS Total
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={eftposTotal}
+                  onChange={e => setEftposTotal(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                />
+              </div>
+            </div>
+
+            {/* Total Takings — shown when any amount entered */}
+            {tillEntered && (
+              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                <div>
+                  <span className="text-sm font-semibold text-gray-700">Total Takings</span>
+                  {cashTotal !== '' && eftposTotal !== '' && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {formatCurrency(cashSales)} cash + {formatCurrency(eftposNum)} EFTPOS
+                    </p>
+                  )}
+                </div>
+                <span className="text-xl font-bold text-[#1A1A1A]">{formatCurrency(tillTotal)}</span>
+              </div>
+            )}
+
+            {/* Discrepancy reason — auto-shown when discrepancy detected */}
+            {tillIsDiscrepancy && (
+              <div className="rounded-xl border border-[#DC2626] overflow-hidden">
+                <div className="px-3 py-2 bg-red-50 flex items-center gap-2">
+                  <span className="text-sm font-semibold text-[#DC2626]">⚠ Discrepancy — add reason</span>
+                </div>
+                <textarea
+                  value={discrepancyReason}
+                  onChange={e => setDiscrepancyReason(e.target.value)}
+                  placeholder="What happened? (e.g. refund given in cash, counted twice…)"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-red-50 text-base focus:outline-none resize-none text-[#1A1A1A] placeholder-red-300 border-0"
+                />
+              </div>
+            )}
+
+          </div>
         </div>
 
         {/* ── Notes ── */}
