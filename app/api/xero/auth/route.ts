@@ -84,11 +84,11 @@ export async function GET() {
   const state = crypto.randomUUID()
 
   // Build the Xero authorization URL
+  // Note: scopes are configured in the Xero app portal, not passed as a parameter
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: settings['xero_client_id'],
     redirect_uri: redirectUri,
-    scope: 'accounting.transactions offline_access',
     state,
   })
   const xeroAuthUrl = `https://login.xero.com/identity/connect/authorize?${params.toString()}`
