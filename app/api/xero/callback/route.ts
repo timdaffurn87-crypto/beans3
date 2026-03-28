@@ -9,23 +9,9 @@ import { cookies } from 'next/headers'
  * Exchanges the authorization code for tokens, gets the tenant ID,
  * then stores both in the settings table.
  *
- * Redirects to /admin/settings on success or failure with a query param
- * so the settings page can show the appropriate message.
+ * Requires XERO_REDIRECT_URI env var — must match exactly what's in the Xero app
+ * and what was sent in the /api/xero/auth request.
  */
-/** Derives the public origin (e.g. https://beans3.vercel.app) from request headers */
-function getPublicOrigin(request: Request): string {
-  const forwardedHost = request.headers.get('x-forwarded-host')
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
-  if (forwardedHost) {
-    const host = forwardedHost.split(',')[0].trim()
-    return `${forwardedProto}://${host}`
-  }
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
-  }
-  return new URL(request.url).origin
-}
-
 export async function GET(request: Request) {
   const cookieStore = await cookies()
   const url = new URL(request.url)
@@ -34,8 +20,12 @@ export async function GET(request: Request) {
   const state = url.searchParams.get('state')
   const error = url.searchParams.get('error')
 
-  const origin = getPublicOrigin(request)
-  const settingsUrl = `${origin}/admin/settings`
+  // Redirect back to settings — using NEXT_PUBLIC_APP_URL if set, otherwise
+  // fall back to the origin derived from the Xero redirect URI env var
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+    ?? process.env.XERO_REDIRECT_URI?.replace('/api/xero/callback', '')
+    ?? 'https://beans3.vercel.app'
+  const settingsUrl = `${appUrl.replace(/\/$/, '')}/admin/settings`
 
   // Handle Xero-side errors (e.g. user clicked Cancel)
   if (error) {
@@ -92,7 +82,11 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${settingsUrl}?xero=error&msg=missing_credentials`)
   }
 
-  const redirectUri = `${origin}/api/xero/callback`
+  // Must use the exact same redirect_uri that was sent in the auth request
+  const redirectUri = process.env.XERO_REDIRECT_URI
+  if (!redirectUri) {
+    return NextResponse.redirect(`${settingsUrl}?xero=error&msg=missing_redirect_uri_env`)
+  }
 
   try {
     // Exchange authorization code for access + refresh tokens
@@ -117,7 +111,7 @@ export async function GET(request: Request) {
       { key: 'xero_tenant_id', value: tenantId, updated_at: now },
     ], { onConflict: 'key' })
 
-    // Clear the state cookie
+    // Clear the state cookie and redirect to settings with success indicator
     const response = NextResponse.redirect(`${settingsUrl}?xero=connected`)
     response.cookies.delete('xero_oauth_state')
     return response

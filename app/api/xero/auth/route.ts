@@ -9,12 +9,22 @@ import { cookies } from 'next/headers'
  * Only accessible by authenticated owners.
  * Redirects the browser to Xero's login/consent screen.
  *
- * Required settings in DB: xero_client_id
- * Owner must register the callback URL in their Xero app:
- *   https://<your-app-domain>/api/xero/callback
+ * Requires XERO_REDIRECT_URI env var set to exactly:
+ *   https://beans3.vercel.app/api/xero/callback
+ * (must match what's registered in your Xero app)
  */
-export async function GET(request: Request) {
+export async function GET() {
   const cookieStore = await cookies()
+
+  // XERO_REDIRECT_URI must be set in Vercel env vars to avoid any dynamic
+  // URL construction that could cause a mismatch with Xero's registered URI
+  const redirectUri = process.env.XERO_REDIRECT_URI
+  if (!redirectUri) {
+    return NextResponse.json(
+      { error: 'XERO_REDIRECT_URI environment variable is not set on the server.' },
+      { status: 500 }
+    )
+  }
 
   // Verify authenticated user
   const supabase = createServerClient(
@@ -48,7 +58,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Owner access required' }, { status: 403 })
   }
 
-  // Read client_id from settings using service role (secure)
+  // Read client_id from settings using service role (bypasses RLS for sensitive keys)
   const adminSupabase = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -73,58 +83,25 @@ export async function GET(request: Request) {
   // Generate a random state value for CSRF protection
   const state = crypto.randomUUID()
 
-  // Store state in a short-lived cookie (5 min)
-  const response = NextResponse.redirect(buildXeroAuthUrl(
-    settings['xero_client_id'],
-    buildRedirectUri(request),
-    state
-  ))
+  // Build the Xero authorization URL
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: settings['xero_client_id'],
+    redirect_uri: redirectUri,
+    scope: 'accounting.transactions offline_access',
+    state,
+  })
+  const xeroAuthUrl = `https://login.xero.com/identity/connect/authorize?${params.toString()}`
+
+  // Store state in a short-lived cookie (5 min) for CSRF validation on callback
+  const response = NextResponse.redirect(xeroAuthUrl)
   response.cookies.set('xero_oauth_state', state, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 300, // 5 minutes
+    maxAge: 300,
     path: '/',
     sameSite: 'lax',
   })
 
   return response
-}
-
-/** Builds the Xero OAuth authorization URL */
-function buildXeroAuthUrl(clientId: string, redirectUri: string, state: string): string {
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    redirect_uri: redirectUri,
-    scope: 'accounting.transactions offline_access',
-    state,
-  })
-  return `https://login.xero.com/identity/connect/authorize?${params.toString()}`
-}
-
-/**
- * Constructs the OAuth callback URL.
- * Uses x-forwarded-host / x-forwarded-proto headers so it works correctly
- * on Vercel where request.url can be an internal URL rather than the public domain.
- * Falls back to NEXT_PUBLIC_APP_URL env var if headers aren't present.
- */
-function buildRedirectUri(request: Request): string {
-  // Vercel sets these headers to the real public hostname/protocol
-  const forwardedHost = request.headers.get('x-forwarded-host')
-  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
-
-  if (forwardedHost) {
-    // Use the first value if multiple hosts are forwarded
-    const host = forwardedHost.split(',')[0].trim()
-    return `${forwardedProto}://${host}/api/xero/callback`
-  }
-
-  // Fallback: NEXT_PUBLIC_APP_URL env var (e.g. https://beans3.vercel.app)
-  if (process.env.NEXT_PUBLIC_APP_URL) {
-    return `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/api/xero/callback`
-  }
-
-  // Last resort: derive from request.url (works locally)
-  const url = new URL(request.url)
-  return `${url.origin}/api/xero/callback`
 }
