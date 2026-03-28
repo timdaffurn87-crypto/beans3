@@ -170,30 +170,24 @@ export default function EODPage() {
   const [submitted, setSubmitted] = useState(false) // shows success screen
   const [showIncompleteWarning, setShowIncompleteWarning] = useState(false)
 
-  // Till balance
+  // Till balance — cash/EFTPOS totals for recording daily takings
   const [cashTotal, setCashTotal] = useState('')
   const [eftposTotal, setEftposTotal] = useState('')
-  const [hasDiscrepancy, setHasDiscrepancy] = useState(false)
-  const [discrepancyReason, setDiscrepancyReason] = useState('')
   const [tillFloat, setTillFloat] = useState<number | null>(null)
+
+  // Till reconciliation — explicit accountability: did the till balance?
+  // null = not yet answered; true = balanced; false = discrepancy
+  const [tillBalanced, setTillBalanced] = useState<boolean | null>(null)
+  const [tillDiscrepancyAmount, setTillDiscrepancyAmount] = useState('')
+  const [tillExplanation, setTillExplanation] = useState('')
+
+  // Captured after submit so the success screen can show the right message
+  const [submittedBalanced, setSubmittedBalanced] = useState<boolean | null>(null)
 
   // Auth guard
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
   }, [profile, loading, router])
-
-  // Auto-flag discrepancy when cash count deviates from the float
-  useEffect(() => {
-    if (tillFloat === null || cashTotal === '') return
-    const variance = parseFloat(cashTotal) - tillFloat
-    // Flag if variance is more than $0.01 (i.e. any mismatch)
-    if (Math.abs(variance) > 0.01) {
-      setHasDiscrepancy(true)
-    } else {
-      setHasDiscrepancy(false)
-      setDiscrepancyReason('')
-    }
-  }, [cashTotal, tillFloat])
 
   /** Load all café-day data needed for the EOD summary */
   async function fetchDayData() {
@@ -234,8 +228,24 @@ export default function EODPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
-  /** Begin submission — show warning modal if tasks are incomplete, else submit directly */
+  /** Begin submission — validate till reconciliation, then warn about incomplete tasks */
   function handleSubmitClick() {
+    // Till reconciliation is required before closing the day
+    if (tillBalanced === null) {
+      showToast('Please confirm whether the till balanced', 'error')
+      return
+    }
+    if (tillBalanced === false) {
+      if (!tillDiscrepancyAmount.trim() || isNaN(parseFloat(tillDiscrepancyAmount))) {
+        showToast('Enter the discrepancy amount', 'error')
+        return
+      }
+      if (!tillExplanation.trim()) {
+        showToast('Add an explanation for the discrepancy', 'error')
+        return
+      }
+    }
+
     if (incompleteTasks.length > 0) {
       setShowIncompleteWarning(true)
     } else {
@@ -252,13 +262,10 @@ export default function EODPage() {
     const supabase = createClient()
 
     try {
-      // 1. Build notes — append till balance data if entered
+      // 1. Build notes — append till takings summary if entered
       let fullNotes = notes.trim()
       if (tillEntered) {
-        const tillNote = [
-          `TILL BALANCE — Cash: ${formatCurrency(cashNum)} | EFTPOS: ${formatCurrency(eftposNum)} | Total: ${formatCurrency(tillTotal)}`,
-          hasDiscrepancy ? `DISCREPANCY: ${discrepancyReason.trim() || 'No reason given'}` : 'Status: Balanced',
-        ].join('\n')
+        const tillNote = `TILL — Cash: ${formatCurrency(cashNum)} | EFTPOS: ${formatCurrency(eftposNum)} | Total: ${formatCurrency(tillTotal)}`
         fullNotes = fullNotes ? `${fullNotes}\n\n${tillNote}` : tillNote
       }
 
@@ -294,10 +301,21 @@ export default function EODPage() {
         .update({ status: 'submitted' })
         .eq('cafe_day', cafeDay)
 
-      // 3. Log activity
+      // 3. Save till reconciliation record
+      await supabase.from('till_reconciliation').insert({
+        cafe_day: cafeDay,
+        logged_by: profile.id,
+        balanced: tillBalanced,
+        discrepancy_amount: tillBalanced === false ? parseFloat(tillDiscrepancyAmount) : null,
+        explanation: tillBalanced === false ? tillExplanation.trim() : null,
+      })
+      // Capture for success screen
+      setSubmittedBalanced(tillBalanced)
+
+      // 4. Log activity
       await logActivity(profile.id, 'eod_submitted', `EOD report submitted for ${cafeDay}`)
 
-      // 4. Generate Xero Bill Import CSV from today's invoices and send EOD email
+      // 5. Generate Xero Bill Import CSV from today's invoices and send EOD email
       const xeroCSV = generateXeroCSV(invoices, cafeDay)
       await fetch('/api/eod-email', {
         method: 'POST',
@@ -305,7 +323,7 @@ export default function EODPage() {
         body: JSON.stringify({ ...reportPayload, xero_csv: xeroCSV, xero_csv_filename: `Beans-Invoices-${cafeDay}.csv` }),
       })
 
-      // 5. Show success screen
+      // 6. Show success screen
       setSubmitted(true)
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Something went wrong', 'error')
@@ -418,29 +436,43 @@ export default function EODPage() {
 
   // ── Submitted successfully this session ──────────────────────────────────
   if (submitted) {
+    const hasDiscrepancy = submittedBalanced === false
     return (
       <div
         className="min-h-screen flex items-center justify-center pb-24"
         style={{ backgroundColor: '#FAF8F3' }}
       >
-        <div className="px-5 w-full max-w-sm">
+        <div className="px-5 w-full max-w-sm space-y-3">
+          {/* Main confirmation card */}
           <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 text-[#16A34A]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+              hasDiscrepancy ? 'bg-red-100' : 'bg-green-100'
+            }`}>
+              {hasDiscrepancy ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-[#DC2626]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                </svg>
+              )}
             </div>
             <h2 className="text-2xl font-bold text-[#1A1A1A] mb-2">Day Closed</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Great shift. Report submitted and emailed to the owner.
+              {hasDiscrepancy
+                ? 'Report submitted. The till discrepancy has been logged and the owner has been notified.'
+                : 'Great shift. Report submitted and emailed to the owner.'}
             </p>
+            {hasDiscrepancy && (
+              <div className="mt-4 px-4 py-3 bg-red-50 rounded-xl text-left">
+                <p className="text-xs font-semibold text-[#DC2626] uppercase tracking-wide mb-1">Discrepancy logged</p>
+                <p className="text-sm text-[#1A1A1A] font-medium">
+                  {parseFloat(tillDiscrepancyAmount) > 0 ? '+' : ''}{formatCurrency(parseFloat(tillDiscrepancyAmount))}
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">{tillExplanation}</p>
+              </div>
+            )}
             <button
               onClick={handleSignOut}
               className="mt-6 w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold"
@@ -655,15 +687,15 @@ export default function EODPage() {
 
           <div className="space-y-3">
 
-            {/* Float reference row */}
+            {/* Float reference */}
             {tillFloat !== null && (
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50">
-                <span className="text-sm text-gray-500">Expected float (opening cash)</span>
+                <span className="text-sm text-gray-500">Expected float</span>
                 <span className="text-sm font-semibold text-[#1A1A1A]">{formatCurrency(tillFloat)}</span>
               </div>
             )}
 
-            {/* Cash Counted input */}
+            {/* Cash Counted */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
                 Cash Counted
@@ -677,39 +709,25 @@ export default function EODPage() {
                   value={cashTotal}
                   onChange={e => setCashTotal(e.target.value)}
                   placeholder={tillFloat !== null ? tillFloat.toFixed(2) : '0.00'}
-                  className={`w-full pl-7 pr-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2 bg-[#FAF8F3] ${
-                    tillIsDiscrepancy
-                      ? 'border-[#DC2626] focus:ring-[#DC2626]'
-                      : 'border-gray-200 focus:ring-[#B8960C]'
-                  }`}
+                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
                 />
               </div>
             </div>
 
-            {/* Cash calculation breakdown — shown once cash is entered */}
+            {/* Cash breakdown — shown once cash + float are available */}
             {cashTotal !== '' && tillFloat !== null && (
               <div className="rounded-xl border border-gray-100 overflow-hidden">
-                {/* Cash Sales line */}
                 <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
                   <span className="text-sm text-gray-600">
                     Cash Sales <span className="text-xs text-gray-400">({formatCurrency(cashNum)} − {formatCurrency(tillFloat)} float)</span>
                   </span>
                   <span className="text-sm font-semibold text-[#1A1A1A]">{formatCurrency(cashSales)}</span>
                 </div>
-                {/* Variance line */}
                 <div className={`flex items-center justify-between px-3 py-2 ${
-                  !tillIsDiscrepancy
-                    ? 'bg-green-50'
-                    : cashVariance! > 0
-                    ? 'bg-amber-50'
-                    : 'bg-red-50'
+                  !tillIsDiscrepancy ? 'bg-green-50' : cashVariance! > 0 ? 'bg-amber-50' : 'bg-red-50'
                 }`}>
                   <span className={`text-sm font-semibold ${
-                    !tillIsDiscrepancy
-                      ? 'text-[#16A34A]'
-                      : cashVariance! > 0
-                      ? 'text-[#D97706]'
-                      : 'text-[#DC2626]'
+                    !tillIsDiscrepancy ? 'text-[#16A34A]' : cashVariance! > 0 ? 'text-[#D97706]' : 'text-[#DC2626]'
                   }`}>
                     {!tillIsDiscrepancy
                       ? '✓ Balanced'
@@ -717,12 +735,12 @@ export default function EODPage() {
                       ? `OVER  +${formatCurrency(cashVariance!)}`
                       : `SHORT  −${formatCurrency(Math.abs(cashVariance!))}`}
                   </span>
-                  <span className="text-xs text-gray-400">cash variance</span>
+                  <span className="text-xs text-gray-400">variance</span>
                 </div>
               </div>
             )}
 
-            {/* EFTPOS input */}
+            {/* EFTPOS */}
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5 block">
                 EFTPOS Total
@@ -741,7 +759,7 @@ export default function EODPage() {
               </div>
             </div>
 
-            {/* Total Takings — shown when any amount entered */}
+            {/* Total Takings */}
             {tillEntered && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                 <div>
@@ -755,24 +773,114 @@ export default function EODPage() {
                 <span className="text-xl font-bold text-[#1A1A1A]">{formatCurrency(tillTotal)}</span>
               </div>
             )}
+          </div>
+        </div>
 
-            {/* Discrepancy reason — auto-shown when discrepancy detected */}
-            {tillIsDiscrepancy && (
-              <div className="rounded-xl border border-[#DC2626] overflow-hidden">
-                <div className="px-3 py-2 bg-red-50 flex items-center gap-2">
-                  <span className="text-sm font-semibold text-[#DC2626]">⚠ Discrepancy — add reason</span>
+        {/* ── Till Reconciliation ── */}
+        <div className={`rounded-2xl p-4 shadow-sm border-2 transition-colors ${
+          tillBalanced === null
+            ? 'bg-white border-gray-200'
+            : tillBalanced
+            ? 'bg-white border-[#16A34A]'
+            : 'bg-white border-[#DC2626]'
+        }`}>
+          {/* Header */}
+          <div className="flex items-center gap-2 mb-4">
+            <p className="section-label">Till Reconciliation</p>
+            <span className="text-[#DC2626] text-xs font-semibold">Required</span>
+          </div>
+
+          <p className="text-sm font-semibold text-[#1A1A1A] mb-3">Did the till balance?</p>
+
+          {/* Yes / No toggle buttons */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setTillBalanced(true)}
+              className={`py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                tillBalanced === true
+                  ? 'bg-[#16A34A] text-white shadow-md'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              <span className="text-xl">✓</span>
+              <span>Yes</span>
+            </button>
+            <button
+              onClick={() => {
+                setTillBalanced(false)
+                // Pre-fill discrepancy amount from calculated variance if available
+                if (cashVariance !== null && tillDiscrepancyAmount === '') {
+                  setTillDiscrepancyAmount(cashVariance.toFixed(2))
+                }
+              }}
+              className={`py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 ${
+                tillBalanced === false
+                  ? 'bg-[#DC2626] text-white shadow-md'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+              }`}
+            >
+              <span className="text-xl">✗</span>
+              <span>No</span>
+            </button>
+          </div>
+
+          {/* Discrepancy fields — animate in when No is selected */}
+          <div
+            className="overflow-hidden transition-all duration-300 ease-in-out"
+            style={{ maxHeight: tillBalanced === false ? '400px' : '0px', opacity: tillBalanced === false ? 1 : 0 }}
+          >
+            <div className="pt-4 space-y-3">
+              {/* Discrepancy amount */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                  Discrepancy Amount <span className="text-[#DC2626]">*</span>
+                </label>
+                <p className="text-xs text-gray-400 mb-2">
+                  Positive = till is over, negative = till is short
+                </p>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={tillDiscrepancyAmount}
+                    onChange={e => setTillDiscrepancyAmount(e.target.value)}
+                    placeholder="e.g. -5.00 or +10.00"
+                    className="w-full pl-7 pr-4 py-3 rounded-xl border border-red-300 bg-red-50 text-base focus:outline-none focus:ring-2 focus:ring-[#DC2626] text-[#1A1A1A]"
+                  />
                 </div>
+              </div>
+
+              {/* Explanation */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1.5 block">
+                  Explanation <span className="text-[#DC2626]">*</span>
+                </label>
                 <textarea
-                  value={discrepancyReason}
-                  onChange={e => setDiscrepancyReason(e.target.value)}
-                  placeholder="What happened? (e.g. refund given in cash, counted twice…)"
+                  value={tillExplanation}
+                  onChange={e => setTillExplanation(e.target.value)}
+                  placeholder="What happened? (e.g. gave $10 refund in cash, mis-keyed sale, counted twice…)"
                   rows={3}
-                  className="w-full px-4 py-3 bg-red-50 text-base focus:outline-none resize-none text-[#1A1A1A] placeholder-red-300 border-0"
+                  className="w-full px-4 py-3 rounded-xl border border-red-300 bg-red-50 text-base focus:outline-none focus:ring-2 focus:ring-[#DC2626] resize-none text-[#1A1A1A] placeholder-red-300"
                 />
               </div>
-            )}
 
+              <div className="flex items-start gap-2 px-3 py-2 bg-red-50 rounded-xl border border-red-200">
+                <span className="text-[#DC2626] mt-0.5">⚠</span>
+                <p className="text-xs text-[#DC2626] font-medium">
+                  This discrepancy will be logged and flagged in the owner&apos;s report.
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Balanced confirmation */}
+          {tillBalanced === true && (
+            <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-green-50 rounded-xl">
+              <span className="text-[#16A34A]">✓</span>
+              <p className="text-sm font-medium text-[#16A34A]">Till balanced — recorded</p>
+            </div>
+          )}
         </div>
 
         {/* ── Notes ── */}
