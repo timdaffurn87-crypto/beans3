@@ -169,6 +169,9 @@ export default function MyRosterPage() {
   const [fetchState, setFetchState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState('')
 
+  // If Firebase backend URL isn't configured, show coming soon instead of an error
+  const isConfigured = Boolean(process.env.NEXT_PUBLIC_FIREBASE_FUNCTIONS_BASE_URL)
+
   // Redirect unauthenticated users to login
   useEffect(() => {
     if (!authLoading && !profile) {
@@ -194,9 +197,9 @@ export default function MyRosterPage() {
     }
   }
 
-  // Kick off fetch once we have a profile
+  // Kick off fetch once we have a profile — but only if the backend is configured
   useEffect(() => {
-    if (profile && fetchState === 'idle') {
+    if (profile && fetchState === 'idle' && isConfigured) {
       fetchRoster()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,19 +252,34 @@ export default function MyRosterPage() {
       {/* ── Content ── */}
       <div className="flex-1 flex flex-col px-4">
 
+        {/* Coming soon — shown when Firebase backend isn't connected yet */}
+        {!isConfigured && (
+          <div className="flex flex-col items-center justify-center flex-1 gap-4 py-20 px-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-[#B8960C]/10 flex items-center justify-center text-3xl">
+              📅
+            </div>
+            <div>
+              <p className="font-bold text-[#1A1A1A] text-lg mb-1">Coming Soon</p>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Your roster will appear here once the scheduling system is connected.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Loading */}
-        {fetchState === 'loading' && <LoadingScreen />}
+        {isConfigured && fetchState === 'loading' && <LoadingScreen />}
 
         {/* Error */}
-        {fetchState === 'error' && (
+        {isConfigured && fetchState === 'error' && (
           <ErrorState message={errorMessage} onRetry={fetchRoster} />
         )}
 
         {/* Success — empty */}
-        {fetchState === 'success' && shifts.length === 0 && <EmptyState />}
+        {isConfigured && fetchState === 'success' && shifts.length === 0 && <EmptyState />}
 
         {/* Success — shifts list */}
-        {fetchState === 'success' && shifts.length > 0 && (
+        {isConfigured && fetchState === 'success' && shifts.length > 0 && (
           <div className="flex flex-col gap-3 pt-1">
             {/* Shift count summary */}
             <p className="text-xs text-gray-400 font-medium px-1">
