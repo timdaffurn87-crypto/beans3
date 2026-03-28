@@ -316,15 +316,43 @@ export default function EODPage() {
       // 4. Log activity
       await logActivity(profile.id, 'eod_submitted', `EOD report submitted for ${cafeDay}`)
 
-      // 5. Generate Xero Bill Import CSV from today's invoices and send EOD email
+      // 5. Generate Xero Bill Import CSV and send EOD email (CSV is the email attachment fallback)
       const xeroCSV = generateXeroCSV(invoices, cafeDay)
-      await fetch('/api/eod-email', {
+      // Fire-and-forget: email failure should not block the EOD success screen
+      fetch('/api/eod-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...reportPayload, xero_csv: xeroCSV, xero_csv_filename: `Beans-Invoices-${cafeDay}.csv` }),
-      })
+      }).catch(err => console.error('EOD email error:', err))
 
-      // 6. Show success screen
+      // 6. Push invoices directly to Xero (if configured)
+      // Only send invoices that have line items; skip ones already sent (have xero_invoice_id)
+      let xeroResult: { success: boolean; sent?: number; skipped?: number; errors?: string[]; error?: string } | null = null
+      if (invoices.length > 0) {
+        try {
+          const xeroRes = await fetch('/api/xero/send-invoices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invoices, cafe_day: cafeDay }),
+          })
+          xeroResult = await xeroRes.json()
+          if (xeroResult?.success && (xeroResult.sent ?? 0) > 0) {
+            showToast(`${xeroResult.sent} invoice${(xeroResult.sent ?? 0) > 1 ? 's' : ''} sent to Xero`, 'success')
+          } else if (xeroResult?.error && xeroResult.error.includes('not connected')) {
+            // Xero not set up — this is fine, just skip silently
+          } else if (xeroResult && !xeroResult.success) {
+            showToast('Xero: ' + (xeroResult.error ?? 'Send failed'), 'error')
+          }
+          if (xeroResult?.errors && xeroResult.errors.length > 0) {
+            console.warn('Xero partial errors:', xeroResult.errors)
+          }
+        } catch (xeroErr) {
+          console.error('Xero send error:', xeroErr)
+          // Don't block EOD submit — Xero failure is non-fatal
+        }
+      }
+
+      // 7. Show success screen
       setSubmitted(true)
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Something went wrong', 'error')

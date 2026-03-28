@@ -38,6 +38,21 @@ export default function SettingsPage() {
   const [savingGeminiKey, setSavingGeminiKey] = useState(false)
   const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false)
 
+  // Xero integration state
+  const [xeroConnected, setXeroConnected] = useState(false)
+  const [xeroClientIdConfigured, setXeroClientIdConfigured] = useState(false)
+  const [xeroClientSecretConfigured, setXeroClientSecretConfigured] = useState(false)
+  const [xeroClientIdInput, setXeroClientIdInput] = useState('')
+  const [xeroClientSecretInput, setXeroClientSecretInput] = useState('')
+  const [savingXeroCreds, setSavingXeroCreds] = useState(false)
+  const [disconnectingXero, setDisconnectingXero] = useState(false)
+  const [xeroStatusLoading, setXeroStatusLoading] = useState(true)
+
+  // GST-inclusive suppliers
+  const [gstInclusiveSuppliers, setGstInclusiveSuppliers] = useState<string[]>([])
+  const [newSupplierInput, setNewSupplierInput] = useState('')
+  const [savingSuppliers, setSavingSuppliers] = useState(false)
+
   // Targets state
   const [targetWaste, setTargetWaste] = useState('50')
   const [targetTasks, setTargetTasks] = useState('90')
@@ -100,14 +115,69 @@ export default function SettingsPage() {
     setClaudeKeyConfigured(configuredKeys.has('claude_api_key'))
     setGeminiKeyConfigured(configuredKeys.has('gemini_api_key'))
     setLoadingConfig(false)
+
+    // Load GST inclusive suppliers list
+    const { data: suppliersRow } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'xero_gst_inclusive_suppliers')
+      .single()
+
+    if (suppliersRow?.value) {
+      try {
+        setGstInclusiveSuppliers(JSON.parse(suppliersRow.value))
+      } catch {
+        setGstInclusiveSuppliers([])
+      }
+    }
   }
+
+  /** Fetch Xero connection status from the server (reads sensitive keys via service role) */
+  async function fetchXeroStatus() {
+    setXeroStatusLoading(true)
+    try {
+      const res = await fetch('/api/xero/status')
+      if (res.ok) {
+        const data = await res.json()
+        setXeroConnected(data.connected)
+        setXeroClientIdConfigured(data.clientIdConfigured)
+        setXeroClientSecretConfigured(data.clientSecretConfigured)
+      }
+    } finally {
+      setXeroStatusLoading(false)
+    }
+  }
+
+  // Show toast from Xero OAuth callback redirect params
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const xero = params.get('xero')
+    if (xero === 'connected') {
+      showToast('Xero connected successfully', 'success')
+      // Clean up URL
+      window.history.replaceState({}, '', '/admin/settings')
+    } else if (xero === 'cancelled') {
+      showToast('Xero connection cancelled', 'error')
+      window.history.replaceState({}, '', '/admin/settings')
+    } else if (xero === 'error') {
+      showToast('Xero connection failed — check your credentials', 'error')
+      window.history.replaceState({}, '', '/admin/settings')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (profile) {
       fetchStaff()
-      if (profile.role === 'owner') fetchOwnerSettings()
-      else setLoadingConfig(false)
+      if (profile.role === 'owner') {
+        fetchOwnerSettings()
+        fetchXeroStatus()
+      } else {
+        setLoadingConfig(false)
+      }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
   /** Upsert a single setting key/value. Returns true on success. */
@@ -181,6 +251,80 @@ export default function SettingsPage() {
     setShowClaudeKeyInput(false)
     setClaudeKeyInput('')
     showToast('API key saved', 'success')
+  }
+
+  /** Save Xero client credentials (client_id and/or client_secret) */
+  async function handleSaveXeroCreds() {
+    if (!xeroClientIdInput.trim() && !xeroClientSecretInput.trim()) {
+      showToast('Enter at least one credential to save', 'error')
+      return
+    }
+    setSavingXeroCreds(true)
+    const upserts: { key: string; value: string; updated_at: string }[] = []
+    const now = new Date().toISOString()
+    if (xeroClientIdInput.trim()) {
+      upserts.push({ key: 'xero_client_id', value: xeroClientIdInput.trim(), updated_at: now })
+    }
+    if (xeroClientSecretInput.trim()) {
+      upserts.push({ key: 'xero_client_secret', value: xeroClientSecretInput.trim(), updated_at: now })
+    }
+    const supabase = createClient()
+    const { error } = await supabase.from('settings').upsert(upserts, { onConflict: 'key' })
+    setSavingXeroCreds(false)
+    if (error) { showToast(error.message, 'error'); return }
+    setXeroClientIdInput('')
+    setXeroClientSecretInput('')
+    // Refresh status to update the indicators
+    await fetchXeroStatus()
+    showToast('Xero credentials saved', 'success')
+  }
+
+  /** Initiates the Xero OAuth flow — navigates to /api/xero/auth */
+  function handleConnectXero() {
+    window.location.href = '/api/xero/auth'
+  }
+
+  /** Disconnects Xero by removing stored tokens */
+  async function handleDisconnectXero() {
+    setDisconnectingXero(true)
+    try {
+      const res = await fetch('/api/xero/disconnect', { method: 'POST' })
+      if (res.ok) {
+        setXeroConnected(false)
+        showToast('Xero disconnected', 'success')
+      } else {
+        showToast('Failed to disconnect Xero', 'error')
+      }
+    } finally {
+      setDisconnectingXero(false)
+    }
+  }
+
+  /** Adds a supplier name to the GST-inclusive list */
+  async function handleAddSupplier() {
+    const name = newSupplierInput.trim()
+    if (!name) { showToast('Enter a supplier name', 'error'); return }
+    if (gstInclusiveSuppliers.some(s => s.toLowerCase() === name.toLowerCase())) {
+      showToast('Supplier already in list', 'error')
+      return
+    }
+    const updated = [...gstInclusiveSuppliers, name]
+    await saveSuppliers(updated)
+    setNewSupplierInput('')
+  }
+
+  /** Removes a supplier name from the GST-inclusive list */
+  async function handleRemoveSupplier(name: string) {
+    const updated = gstInclusiveSuppliers.filter(s => s !== name)
+    await saveSuppliers(updated)
+  }
+
+  /** Persists the GST-inclusive suppliers list to settings */
+  async function saveSuppliers(list: string[]) {
+    setSavingSuppliers(true)
+    const ok = await upsertSetting('xero_gst_inclusive_suppliers', JSON.stringify(list))
+    setSavingSuppliers(false)
+    if (ok) setGstInclusiveSuppliers(list)
   }
 
   /** Save performance targets */
@@ -472,20 +616,156 @@ export default function SettingsPage() {
                   )}
                 </div>
 
+              </div>
+            </div>
+
+            {/* ── Xero Integration ── */}
+            <div>
+              <p className="section-label mb-3">Xero Integration</p>
+              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+
+                {/* Connection status */}
+                {xeroStatusLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="w-5 h-5 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : xeroConnected ? (
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2 px-4 py-3 bg-green-50 rounded-xl flex-1 mr-3">
+                        <span className="text-[#16A34A] text-sm">✓</span>
+                        <span className="text-xs font-medium text-[#16A34A]">Connected to Xero</span>
+                      </div>
+                      <button
+                        onClick={handleDisconnectXero}
+                        disabled={disconnectingXero}
+                        className="px-4 py-3 rounded-xl border border-red-200 text-red-500 text-sm font-medium disabled:opacity-40 whitespace-nowrap"
+                      >
+                        {disconnectingXero ? 'Disconnecting…' : 'Disconnect'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400">
+                      Invoices will be pushed directly to Xero Bills when you submit End of Day.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-600">
+                      Connect Beans to Xero to automatically push invoices as Bills when you close the day.
+                    </p>
+                    <div className="bg-amber-50 rounded-xl p-3">
+                      <p className="text-xs text-amber-700 font-medium mb-1">Before connecting:</p>
+                      <ol className="text-xs text-amber-600 space-y-1 list-decimal list-inside">
+                        <li>Enter your Client ID and Client Secret below</li>
+                        <li>In your Xero app settings, add this callback URL:</li>
+                      </ol>
+                      <p className="text-xs font-mono bg-amber-100 rounded px-2 py-1 mt-2 break-all">
+                        {typeof window !== 'undefined' ? window.location.origin : ''}/api/xero/callback
+                      </p>
+                    </div>
+
+                    {/* Client ID input */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Client ID
+                        {xeroClientIdConfigured && (
+                          <span className="ml-2 text-xs text-[#16A34A] font-normal">✓ saved</span>
+                        )}
+                      </label>
+                      <input
+                        type="text"
+                        value={xeroClientIdInput}
+                        onChange={e => setXeroClientIdInput(e.target.value)}
+                        placeholder={xeroClientIdConfigured ? '••••••••••••' : 'Paste your Xero Client ID'}
+                        className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] font-mono text-sm"
+                      />
+                    </div>
+
+                    {/* Client Secret input */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-sm font-medium text-gray-700">
+                        Client Secret
+                        {xeroClientSecretConfigured && (
+                          <span className="ml-2 text-xs text-[#16A34A] font-normal">✓ saved</span>
+                        )}
+                      </label>
+                      <input
+                        type="password"
+                        value={xeroClientSecretInput}
+                        onChange={e => setXeroClientSecretInput(e.target.value)}
+                        placeholder={xeroClientSecretConfigured ? '••••••••••••' : 'Paste your Xero Client Secret'}
+                        className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] font-mono text-sm"
+                      />
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSaveXeroCreds}
+                        disabled={savingXeroCreds || (!xeroClientIdInput.trim() && !xeroClientSecretInput.trim())}
+                        className="flex-1 py-2.5 rounded-full border border-[#B8960C] text-[#B8960C] font-semibold text-sm disabled:opacity-40"
+                      >
+                        {savingXeroCreds ? 'Saving…' : 'Save Credentials'}
+                      </button>
+                      <button
+                        onClick={handleConnectXero}
+                        disabled={!xeroClientIdConfigured || !xeroClientSecretConfigured}
+                        className="flex-1 py-2.5 rounded-full bg-[#13B5EA] text-white font-semibold text-sm disabled:opacity-40"
+                      >
+                        Connect to Xero
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="border-t border-gray-100" />
 
-                {/* Xero API Key — placeholder */}
+                {/* GST-inclusive suppliers */}
                 <div>
-                  <div className="mb-2">
-                    <p className="font-medium text-gray-400 text-sm">Xero Integration</p>
-                    <p className="text-xs text-gray-300 mt-0.5">Coming soon</p>
+                  <div className="mb-3">
+                    <p className="font-medium text-[#1A1A1A] text-sm">GST-Inclusive Suppliers</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      Suppliers whose invoices show GST-inclusive totals. All others are treated as ex-GST.
+                    </p>
                   </div>
-                  <input
-                    type="text"
-                    disabled
-                    placeholder="Coming soon"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 text-gray-300 text-base cursor-not-allowed"
-                  />
+
+                  {/* Current list */}
+                  {gstInclusiveSuppliers.length > 0 ? (
+                    <div className="space-y-2 mb-3">
+                      {gstInclusiveSuppliers.map(name => (
+                        <div key={name} className="flex items-center justify-between px-4 py-2.5 bg-[#FAF8F3] rounded-xl">
+                          <span className="text-sm text-[#1A1A1A]">{name}</span>
+                          <button
+                            onClick={() => handleRemoveSupplier(name)}
+                            disabled={savingSuppliers}
+                            className="text-red-400 text-sm font-medium disabled:opacity-40 ml-3 shrink-0"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 mb-3">No suppliers added yet. All invoices will use ex-GST amounts.</p>
+                  )}
+
+                  {/* Add supplier */}
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newSupplierInput}
+                      onChange={e => setNewSupplierInput(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleAddSupplier()}
+                      placeholder="Supplier name (e.g. Ozone Coffee)"
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    />
+                    <button
+                      onClick={handleAddSupplier}
+                      disabled={savingSuppliers || !newSupplierInput.trim()}
+                      className="px-4 py-2.5 rounded-xl bg-[#B8960C] text-white text-sm font-semibold disabled:opacity-40 whitespace-nowrap"
+                    >
+                      + Add
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

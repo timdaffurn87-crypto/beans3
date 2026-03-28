@@ -86,6 +86,7 @@ export interface Invoice {
   status: 'pending' | 'submitted'
   cafe_day: string
   created_at: string
+  xero_invoice_id: string | null  // Xero Invoice ID once pushed; null = not yet sent
 }
 
 export interface LineItem {
