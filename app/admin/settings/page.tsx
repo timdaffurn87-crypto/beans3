@@ -103,12 +103,17 @@ export default function SettingsPage() {
     }
   }, [profile])
 
-  /** Upsert a single setting key/value */
-  async function upsertSetting(key: string, value: string) {
+  /** Upsert a single setting key/value. Returns true on success. */
+  async function upsertSetting(key: string, value: string): Promise<boolean> {
     const supabase = createClient()
-    await supabase
+    const { error } = await supabase
       .from('settings')
       .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' })
+    if (error) {
+      showToast(`Failed to save setting: ${error.message}`, 'error')
+      return false
+    }
+    return true
   }
 
   /** Save café configuration */
@@ -146,8 +151,9 @@ export default function SettingsPage() {
       return
     }
     setSavingClaudeKey(true)
-    await upsertSetting('claude_api_key', claudeKeyInput.trim())
+    const ok = await upsertSetting('claude_api_key', claudeKeyInput.trim())
     setSavingClaudeKey(false)
+    if (!ok) return
     setClaudeKeyConfigured(true)
     setShowClaudeKeyInput(false)
     setClaudeKeyInput('')

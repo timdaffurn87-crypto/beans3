@@ -74,38 +74,45 @@ If you cannot read a field clearly, set it to null. If you cannot determine a nu
   // PDFs use the 'document' content type; images use 'image'
   const isPdf = mediaType === 'application/pdf'
 
-  const message = await anthropic.messages.create({
-    model: 'claude-opus-4-6',
-    max_tokens: 1024,
-    messages: [
-      {
-        role: 'user',
-        content: isPdf
-          ? [
-              {
-                type: 'document' as const,
-                source: {
-                  type: 'base64' as const,
-                  media_type: 'application/pdf' as const,
-                  data: imageBase64,
+  let message
+  try {
+    message = await anthropic.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 1024,
+      messages: [
+        {
+          role: 'user',
+          content: isPdf
+            ? [
+                {
+                  type: 'document' as const,
+                  source: {
+                    type: 'base64' as const,
+                    media_type: 'application/pdf' as const,
+                    data: imageBase64,
+                  },
                 },
-              },
-              { type: 'text' as const, text: prompt },
-            ]
-          : [
-              {
-                type: 'image' as const,
-                source: {
-                  type: 'base64' as const,
-                  media_type: (mediaType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-                  data: imageBase64,
+                { type: 'text' as const, text: prompt },
+              ]
+            : [
+                {
+                  type: 'image' as const,
+                  source: {
+                    type: 'base64' as const,
+                    media_type: (mediaType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+                    data: imageBase64,
+                  },
                 },
-              },
-              { type: 'text' as const, text: prompt },
-            ],
-      },
-    ],
-  })
+                { type: 'text' as const, text: prompt },
+              ],
+        },
+      ],
+    })
+  } catch (err) {
+    // Surface the actual Anthropic error (e.g. invalid API key, rate limit, etc.)
+    const message = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: `Claude API error: ${message}` }, { status: 502 })
+  }
 
   const content = message.content[0]
   if (content.type !== 'text') {
