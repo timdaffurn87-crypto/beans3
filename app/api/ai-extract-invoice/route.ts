@@ -6,16 +6,29 @@ import Anthropic from '@anthropic-ai/sdk'
 const EXTRACTION_PROMPT = `Extract the invoice data from this document and return it as JSON only, no explanation. Use this exact structure:
 {
   "supplier_name": "string",
+  "supplier_email": "string or null",
+  "invoice_number": "string or null",
   "invoice_date": "YYYY-MM-DD or null",
-  "reference_number": "string or null",
-  "total_amount": number,
+  "due_date": "YYYY-MM-DD or null",
   "line_items": [
-    { "description": "string", "quantity": number, "unit_price": number, "total": number }
+    {
+      "description": "string",
+      "quantity": number,
+      "unit_amount": number,
+      "account_code": "300",
+      "inventory_item_code": ""
+    }
   ],
   "confidence": "high" | "medium" | "low"
 }
 
-If you cannot read a field clearly, set it to null. If you cannot determine a numeric value, use 0. Return only the JSON object, nothing else.`
+Rules:
+- unit_amount is the price per unit EXCLUDING GST
+- due_date: extract from invoice if present, otherwise leave null (the app will default to 30 days from invoice_date)
+- account_code: always use "300" unless you can clearly identify a different account
+- inventory_item_code: leave as empty string unless the invoice shows a product/item code
+- If you cannot read a field clearly, set it to null. If you cannot determine a numeric value, use 0.
+- Return only the JSON object, nothing else.`
 
 /**
  * Strips markdown code fences and parses JSON from a model response string.

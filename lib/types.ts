@@ -75,8 +75,10 @@ export interface Invoice {
   id: string
   scanned_by: string
   supplier_name: string
+  supplier_email: string | null
   invoice_date: string | null
-  reference_number: string | null
+  due_date: string | null
+  reference_number: string | null  // used as InvoiceNumber in Xero
   total_amount: number
   line_items: LineItem[]
   photo_url: string
@@ -89,8 +91,9 @@ export interface Invoice {
 export interface LineItem {
   description: string
   quantity: number
-  unit_price: number
-  total: number
+  unit_amount: number       // ex-GST price per unit — maps to Xero UnitAmount
+  account_code: string      // default "300" (COGS) — maps to Xero AccountCode
+  inventory_item_code: string  // optional — maps to Xero InventoryItemCode
 }
 
 export interface Recipe {

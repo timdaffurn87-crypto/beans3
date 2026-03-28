@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 /**
  * POST /api/eod-email
  * Sends the EOD report summary to the owner's email address.
+ * Attaches the Xero Bill Import CSV if provided.
  * Uses Resend if RESEND_API_KEY env var is set; falls back to console log.
  */
 export async function POST(request: Request) {
@@ -25,11 +26,11 @@ export async function POST(request: Request) {
     }
   )
 
-  // Verify the request is authenticated
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const report = await request.json()
+  const body = await request.json()
+  const { xero_csv, xero_csv_filename, ...report } = body
 
   // Get owner email from settings
   const { data: emailSetting } = await supabase
@@ -44,26 +45,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true, note: 'No owner email configured' })
   }
 
-  // Build the HTML email body
   const html = buildEODEmailHTML(report)
   const subject = `Beans EOD Report — ${report.cafe_day}`
 
-  // Send via Resend if API key is available
   const resendKey = process.env.RESEND_API_KEY
   if (resendKey) {
     try {
+      // Build email payload — attach CSV if we have one with line items
+      // Resend expects attachments as base64-encoded content
+      const emailPayload: Record<string, unknown> = {
+        from: 'Beans <noreply@beans.cocoacafe.com.au>',
+        to: ownerEmail,
+        subject,
+        html,
+      }
+
+      if (xero_csv && xero_csv_filename) {
+        const csvBase64 = Buffer.from(xero_csv, 'utf-8').toString('base64')
+        emailPayload.attachments = [
+          {
+            filename: xero_csv_filename,
+            content: csvBase64,
+          },
+        ]
+      }
+
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${resendKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: 'Beans <noreply@beans.cocoacafe.com.au>',
-          to: ownerEmail,
-          subject,
-          html,
-        }),
+        body: JSON.stringify(emailPayload),
       })
 
       if (!res.ok) {
@@ -79,10 +92,11 @@ export async function POST(request: Request) {
     }
   }
 
-  // Fallback: log to console
+  // Fallback: log to console (no Resend key configured)
   console.log(`EOD Report Email to ${ownerEmail}:`)
   console.log(subject)
   console.log(JSON.stringify(report, null, 2))
+  if (xero_csv) console.log(`Xero CSV attachment (${xero_csv_filename}):\n${xero_csv}`)
   return NextResponse.json({
     success: true,
     note: 'Logged to console. Set RESEND_API_KEY env var to send real emails.',
@@ -144,7 +158,7 @@ function buildEODEmailHTML(report: {
         <td style="background: #f9f9f7; border-radius: 8px;">
           <div style="font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 1px;">Invoices</div>
           <div style="font-size: 22px; font-weight: bold; color: #1A1A1A;">${report.invoices_count}</div>
-          <div style="font-size: 13px; color: #888;">$${report.invoices_total_value.toFixed(2)} total</div>
+          <div style="font-size: 13px; color: #888;">$${report.invoices_total_value.toFixed(2)} ex-GST</div>
         </td>
       </tr>
     </table>
@@ -164,6 +178,14 @@ function buildEODEmailHTML(report: {
     <h3 style="color: #1A1A1A; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 12px;">Notes</h3>
     <p style="color: #555; background: #f9f9f7; padding: 16px; border-radius: 8px; margin: 0 0 24px;">${report.notes}</p>
     ` : ''}
+
+    <div style="background: #f0f7ff; border-radius: 8px; padding: 16px; margin-bottom: 24px;">
+      <p style="margin: 0; font-size: 13px; color: #1A6BB3; font-weight: 600;">📎 Xero Import Attached</p>
+      <p style="margin: 4px 0 0; font-size: 12px; color: #555;">
+        The Xero Bill Import CSV is attached to this email.<br>
+        In Xero: Bills to Pay → Import → select the attached file.
+      </p>
+    </div>
 
     <p style="color: #aaa; font-size: 12px; margin: 0;">Sent by Beans · Cocoa Café Operations</p>
   </div>

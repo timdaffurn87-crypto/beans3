@@ -15,6 +15,72 @@ interface CalibrationRow {
   created_at: string
 }
 
+/** Converts YYYY-MM-DD to DD/MM/YYYY for Xero */
+function toXeroDate(dateStr: string | null): string {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
+}
+
+/** Wraps a CSV cell value in quotes if it contains commas, quotes, or newlines */
+function csvCell(value: string): string {
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
+}
+
+/**
+ * Generates a Xero Bill Import CSV string from an array of invoices.
+ * Each line item becomes one row. Invoices with no line items are skipped.
+ * Required Xero columns are populated; optional address and tracking fields are left blank.
+ */
+function generateXeroCSV(invoices: Invoice[], cafeDay: string): string {
+  const headers = [
+    'ContactName', 'EmailAddress',
+    'POAddressLine1', 'POAddressLine2', 'POAddressLine3', 'POAddressLine4',
+    'POCity', 'PORegion', 'POPostalCode', 'POCountry',
+    'InvoiceNumber', 'InvoiceDate', 'DueDate',
+    'InventoryItemCode', 'Description', 'Quantity', 'UnitAmount',
+    'AccountCode', 'TaxType',
+    'TrackingName1', 'TrackingOption1', 'TrackingName2', 'TrackingOption2',
+    'Currency',
+  ]
+
+  const rows: string[] = [headers.join(',')]
+
+  for (const invoice of invoices) {
+    if (!invoice.line_items || invoice.line_items.length === 0) continue
+
+    for (const item of invoice.line_items) {
+      const row = [
+        csvCell(invoice.supplier_name),
+        csvCell(invoice.supplier_email || ''),
+        '', '', '', '', '', '', '', '',               // PO address — blank
+        csvCell(invoice.reference_number || ''),
+        csvCell(toXeroDate(invoice.invoice_date)),
+        csvCell(toXeroDate(invoice.due_date)),
+        csvCell(item.inventory_item_code || ''),
+        csvCell(item.description),
+        String(item.quantity),
+        String(item.unit_amount),
+        csvCell(item.account_code || '300'),
+        'GST on Expenses',
+        '', '', '', '',                               // tracking — blank
+        'AUD',
+      ]
+      rows.push(row.join(','))
+    }
+  }
+
+  // If no invoices had line items, add a comment row so the file isn't empty
+  if (rows.length === 1) {
+    rows.push(`# No invoices with line items on ${cafeDay}`)
+  }
+
+  return rows.join('\n')
+}
+
 /**
  * Calculates calibration compliance for the café day.
  *
@@ -231,11 +297,12 @@ export default function EODPage() {
       // 3. Log activity
       await logActivity(profile.id, 'eod_submitted', `EOD report submitted for ${cafeDay}`)
 
-      // 4. Send EOD email
+      // 4. Generate Xero Bill Import CSV from today's invoices and send EOD email
+      const xeroCSV = generateXeroCSV(invoices, cafeDay)
       await fetch('/api/eod-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(reportPayload),
+        body: JSON.stringify({ ...reportPayload, xero_csv: xeroCSV, xero_csv_filename: `Beans-Invoices-${cafeDay}.csv` }),
       })
 
       // 5. Show success screen
