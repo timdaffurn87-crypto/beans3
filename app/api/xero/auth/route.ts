@@ -102,8 +102,29 @@ function buildXeroAuthUrl(clientId: string, redirectUri: string, state: string):
   return `https://login.xero.com/identity/connect/authorize?${params.toString()}`
 }
 
-/** Constructs the OAuth callback URL from the current request origin */
+/**
+ * Constructs the OAuth callback URL.
+ * Uses x-forwarded-host / x-forwarded-proto headers so it works correctly
+ * on Vercel where request.url can be an internal URL rather than the public domain.
+ * Falls back to NEXT_PUBLIC_APP_URL env var if headers aren't present.
+ */
 function buildRedirectUri(request: Request): string {
+  // Vercel sets these headers to the real public hostname/protocol
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+
+  if (forwardedHost) {
+    // Use the first value if multiple hosts are forwarded
+    const host = forwardedHost.split(',')[0].trim()
+    return `${forwardedProto}://${host}/api/xero/callback`
+  }
+
+  // Fallback: NEXT_PUBLIC_APP_URL env var (e.g. https://beans3.vercel.app)
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return `${process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')}/api/xero/callback`
+  }
+
+  // Last resort: derive from request.url (works locally)
   const url = new URL(request.url)
   return `${url.origin}/api/xero/callback`
 }

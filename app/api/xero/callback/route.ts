@@ -12,6 +12,20 @@ import { cookies } from 'next/headers'
  * Redirects to /admin/settings on success or failure with a query param
  * so the settings page can show the appropriate message.
  */
+/** Derives the public origin (e.g. https://beans3.vercel.app) from request headers */
+function getPublicOrigin(request: Request): string {
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const forwardedProto = request.headers.get('x-forwarded-proto') ?? 'https'
+  if (forwardedHost) {
+    const host = forwardedHost.split(',')[0].trim()
+    return `${forwardedProto}://${host}`
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '')
+  }
+  return new URL(request.url).origin
+}
+
 export async function GET(request: Request) {
   const cookieStore = await cookies()
   const url = new URL(request.url)
@@ -20,7 +34,8 @@ export async function GET(request: Request) {
   const state = url.searchParams.get('state')
   const error = url.searchParams.get('error')
 
-  const settingsUrl = `${url.origin}/admin/settings`
+  const origin = getPublicOrigin(request)
+  const settingsUrl = `${origin}/admin/settings`
 
   // Handle Xero-side errors (e.g. user clicked Cancel)
   if (error) {
@@ -77,7 +92,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${settingsUrl}?xero=error&msg=missing_credentials`)
   }
 
-  const redirectUri = `${url.origin}/api/xero/callback`
+  const redirectUri = `${origin}/api/xero/callback`
 
   try {
     // Exchange authorization code for access + refresh tokens
