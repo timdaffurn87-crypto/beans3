@@ -286,9 +286,10 @@ export default function EODPage() {
         notes: fullNotes || null,
       }
 
+      // Upsert so resubmitting the same café day overwrites the existing record
       const { error: insertError } = await supabase
         .from('eod_reports')
-        .insert(reportPayload)
+        .upsert(reportPayload, { onConflict: 'cafe_day' })
 
       if (insertError) {
         showToast(insertError.message, 'error')
@@ -301,14 +302,14 @@ export default function EODPage() {
         .update({ status: 'submitted' })
         .eq('cafe_day', cafeDay)
 
-      // 3. Save till reconciliation record
-      await supabase.from('till_reconciliation').insert({
+      // 3. Save till reconciliation record — upsert so resubmit overwrites the previous entry
+      await supabase.from('till_reconciliation').upsert({
         cafe_day: cafeDay,
         logged_by: profile.id,
         balanced: tillBalanced,
         discrepancy_amount: tillBalanced === false ? parseFloat(tillDiscrepancyAmount) : null,
         explanation: tillBalanced === false ? tillExplanation.trim() : null,
-      })
+      }, { onConflict: 'cafe_day' })
       // Capture for success screen
       setSubmittedBalanced(tillBalanced)
 
@@ -337,6 +338,23 @@ export default function EODPage() {
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
+  }
+
+  /**
+   * Resubmit — re-fetches all café day data so the summary reflects any
+   * changes made since the last submit (e.g. additional waste entries, tasks
+   * completed, invoices scanned), then resets UI state so the form is editable again.
+   */
+  async function handleResubmit() {
+    setSubmitted(false)
+    setAlreadySubmitted(false)
+    setTillBalanced(null)
+    setTillDiscrepancyAmount('')
+    setTillExplanation('')
+    setSubmittedBalanced(null)
+    setNotes('')
+    setLoadingData(true)
+    await fetchDayData()
   }
 
   // ─── Computed values ───────────────────────────────────────────────────────
@@ -428,6 +446,12 @@ export default function EODPage() {
             >
               Back to Dashboard
             </button>
+            <button
+              onClick={handleResubmit}
+              className="mt-3 w-full py-3 rounded-full border border-gray-200 text-gray-600 text-sm font-medium"
+            >
+              Resubmit for Today
+            </button>
           </div>
         </div>
       </div>
@@ -478,6 +502,12 @@ export default function EODPage() {
               className="mt-6 w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold"
             >
               Back to Login
+            </button>
+            <button
+              onClick={handleResubmit}
+              className="mt-3 w-full py-3 rounded-full border border-gray-200 text-gray-600 text-sm font-medium"
+            >
+              Resubmit for Today
             </button>
           </div>
         </div>
