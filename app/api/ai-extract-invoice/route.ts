@@ -19,15 +19,23 @@ const EXTRACTION_PROMPT = `Extract the invoice data from this document and retur
       "inventory_item_code": ""
     }
   ],
+  "tax_type": "INCLUSIVE" | "EXCLUSIVE" | "NOTAX" | null,
+  "gst_flagged": true | false,
   "confidence": "high" | "medium" | "low"
 }
 
 Rules:
-- unit_amount is the price per unit EXCLUDING GST
+- unit_amount is the price per unit as shown on the invoice (do not adjust for GST)
 - due_date: extract from invoice if present, otherwise leave null (the app will default to 30 days from invoice_date)
 - account_code: always use "300" unless you can clearly identify a different account
 - inventory_item_code: leave as empty string unless the invoice shows a product/item code
 - If you cannot read a field clearly, set it to null. If you cannot determine a numeric value, use 0.
+- tax_type: examine the invoice carefully for GST treatment:
+  - "EXCLUSIVE" — if GST appears as a SEPARATE LINE ITEM showing the GST dollar amount broken out (e.g. "GST $12.50" as its own line)
+  - "INCLUSIVE" — if the invoice shows a total with notation like "incl. GST", "GST included", "Total (GST incl.)" with NO separate GST line item
+  - "NOTAX" — if the invoice explicitly shows items as GST-free, zero-rated, or is from a category exempt from GST
+  - null — if you cannot confidently determine the GST treatment from the invoice
+- gst_flagged: set to true ONLY when tax_type is null (i.e. GST treatment is ambiguous). Set to false in all other cases.
 - Return only the JSON object, nothing else.`
 
 /**
@@ -148,10 +156,33 @@ async function extractWithGemini(
 }
 
 /**
+ * Checks the gst_inclusive_suppliers table for a matching supplier name.
+ * If found, returns true — meaning we should override tax_type to INCLUSIVE.
+ * Uses case-insensitive trimmed comparison.
+ */
+async function isGstInclusiveSupplier(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  adminSupabase: { from: (table: string) => any },
+  supplierName: string
+): Promise<boolean> {
+  const { data } = await adminSupabase
+    .from('gst_inclusive_suppliers')
+    .select('supplier_name')
+
+  if (!data) return false
+
+  const normalised = supplierName.trim().toLowerCase()
+  return data.some((row: { supplier_name: string }) =>
+    row.supplier_name.trim().toLowerCase() === normalised
+  )
+}
+
+/**
  * POST /api/ai-extract-invoice
  * Accepts a base64-encoded invoice image or PDF.
  * Tries Claude first. If Claude is not configured or fails, falls back to Gemini.
- * Returns structured invoice data: supplier, date, reference, line items, total.
+ * After extraction, checks gst_inclusive_suppliers table to override tax_type if needed.
+ * Returns structured invoice data: supplier, date, reference, line items, GST info.
  */
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -206,28 +237,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
+  let result: Record<string, unknown>
+
   // Try Claude first, fall back to Gemini if Claude is unavailable or fails
   if (claudeKey) {
     try {
-      const result = await extractWithClaude(claudeKey, imageBase64, mediaType)
-      return NextResponse.json(result)
+      result = await extractWithClaude(claudeKey, imageBase64, mediaType)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       // If we have a Gemini key, log and fall through to it
       if (geminiKey) {
         console.warn(`Claude extraction failed, falling back to Gemini: ${msg}`)
+        try {
+          result = await extractWithGemini(geminiKey, imageBase64, mediaType)
+          result = { ...result, _provider: 'gemini' }
+        } catch (geminiErr) {
+          const geminiMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr)
+          return NextResponse.json({ error: `Gemini API error: ${geminiMsg}` }, { status: 502 })
+        }
       } else {
         return NextResponse.json({ error: `Claude API error: ${msg}` }, { status: 502 })
       }
     }
+  } else {
+    // No Claude key — go straight to Gemini
+    try {
+      result = await extractWithGemini(geminiKey, imageBase64, mediaType)
+      result = { ...result, _provider: 'gemini' }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      return NextResponse.json({ error: `Gemini API error: ${msg}` }, { status: 502 })
+    }
   }
 
-  // Gemini fallback
-  try {
-    const result = await extractWithGemini(geminiKey, imageBase64, mediaType)
-    return NextResponse.json({ ...result, _provider: 'gemini' })
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
-    return NextResponse.json({ error: `Gemini API error: ${msg}` }, { status: 502 })
+  // Check gst_inclusive_suppliers table — if supplier is known, override to INCLUSIVE
+  const supplierName = (result.supplier_name as string) || ''
+  if (supplierName) {
+    const isInclusiveSupplier = await isGstInclusiveSupplier(adminSupabase, supplierName)
+    if (isInclusiveSupplier) {
+      result = { ...result, tax_type: 'INCLUSIVE', gst_flagged: false }
+    }
   }
+
+  return NextResponse.json(result)
 }

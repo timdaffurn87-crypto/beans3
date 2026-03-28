@@ -55,6 +55,10 @@ export default function InvoicePage() {
   // AI confidence after extraction
   const [aiConfidence, setAiConfidence] = useState<'high' | 'medium' | 'low' | null>(null)
 
+  // GST detection state — set by AI extraction, shown as warning banner when flagged
+  const [gstFlagged, setGstFlagged] = useState(false)
+  const [taxType, setTaxType] = useState<'INCLUSIVE' | 'EXCLUSIVE' | 'NOTAX' | null>(null)
+
   // Form fields — aligned to Xero Bill Import columns
   const [supplierName, setSupplierName] = useState('')       // ContactName
   const [supplierEmail, setSupplierEmail] = useState('')     // EmailAddress
@@ -162,6 +166,8 @@ export default function InvoicePage() {
       }
 
       setAiConfidence(data.confidence || null)
+      setGstFlagged(data.gst_flagged ?? false)
+      setTaxType(data.tax_type ?? null)
       setUiMode('form')
       showToast('Invoice extracted — please verify', 'success')
     } catch {
@@ -199,6 +205,8 @@ export default function InvoicePage() {
     setDueDate('')
     setLineItems([blankLineItem()])
     setAiConfidence(null)
+    setGstFlagged(false)
+    setTaxType(null)
     setIsPdf(false)
   }
 
@@ -248,6 +256,8 @@ export default function InvoicePage() {
         ai_confidence: aiConfidence,
         status: 'pending',
         cafe_day: cafeDay,
+        gst_flagged: gstFlagged,
+        tax_type: taxType,
       })
 
       if (error) { showToast(error.message, 'error'); return }
@@ -431,6 +441,17 @@ export default function InvoicePage() {
                   {aiConfidence === 'medium' && 'AI extracted · Medium confidence — please verify'}
                   {aiConfidence === 'low' && 'AI extracted · Low confidence — verify carefully'}
                 </span>
+              </div>
+            )}
+
+            {/* GST unclear warning — shown when AI cannot determine GST treatment */}
+            {gstFlagged && (
+              <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+                <div>
+                  <p className="text-sm font-semibold text-amber-700">GST type unclear</p>
+                  <p className="text-xs text-amber-600 mt-0.5">Please ask your manager before end of day</p>
+                </div>
               </div>
             )}
 
