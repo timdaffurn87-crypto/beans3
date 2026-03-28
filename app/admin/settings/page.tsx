@@ -33,6 +33,11 @@ export default function SettingsPage() {
   const [savingClaudeKey, setSavingClaudeKey] = useState(false)
   const [showClaudeKeyInput, setShowClaudeKeyInput] = useState(false)
 
+  const [geminiKeyConfigured, setGeminiKeyConfigured] = useState(false)
+  const [geminiKeyInput, setGeminiKeyInput] = useState('')
+  const [savingGeminiKey, setSavingGeminiKey] = useState(false)
+  const [showGeminiKeyInput, setShowGeminiKeyInput] = useState(false)
+
   // Targets state
   const [targetWaste, setTargetWaste] = useState('50')
   const [targetTasks, setTargetTasks] = useState('90')
@@ -85,13 +90,15 @@ export default function SettingsPage() {
     if (map['target_task_completion']) setTargetTasks(map['target_task_completion'])
     if (map['target_calibration_compliance']) setTargetCal(map['target_calibration_compliance'])
 
-    // Check if Claude API key is configured without reading its value
-    const { count } = await supabase
+    // Check which AI keys are configured (count-only — never read the actual values client-side)
+    const { data: keyRows } = await supabase
       .from('settings')
-      .select('*', { count: 'exact', head: true })
-      .eq('key', 'claude_api_key')
+      .select('key')
+      .in('key', ['claude_api_key', 'gemini_api_key'])
 
-    setClaudeKeyConfigured((count ?? 0) > 0)
+    const configuredKeys = new Set((keyRows ?? []).map(r => r.key))
+    setClaudeKeyConfigured(configuredKeys.has('claude_api_key'))
+    setGeminiKeyConfigured(configuredKeys.has('gemini_api_key'))
     setLoadingConfig(false)
   }
 
@@ -142,6 +149,22 @@ export default function SettingsPage() {
 
     await logActivity(profile.id, 'settings_updated', 'Updated café configuration')
     showToast('Configuration saved', 'success')
+  }
+
+  /** Save the Gemini API key */
+  async function handleSaveGeminiKey() {
+    if (!geminiKeyInput.trim()) {
+      showToast('Enter a valid API key', 'error')
+      return
+    }
+    setSavingGeminiKey(true)
+    const ok = await upsertSetting('gemini_api_key', geminiKeyInput.trim())
+    setSavingGeminiKey(false)
+    if (!ok) return
+    setGeminiKeyConfigured(true)
+    setShowGeminiKeyInput(false)
+    setGeminiKeyInput('')
+    showToast('Gemini API key saved', 'success')
   }
 
   /** Save the Claude API key */
@@ -388,6 +411,61 @@ export default function SettingsPage() {
                           className="flex-1 py-2.5 rounded-full bg-[#B8960C] text-white font-semibold text-sm disabled:opacity-40"
                         >
                           {savingClaudeKey ? 'Saving…' : 'Save Key'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t border-gray-100" />
+
+                {/* Gemini API Key — fallback for invoice extraction */}
+                <div>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="font-medium text-[#1A1A1A] text-sm">Gemini API Key</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        Backup AI for invoice scanning if Claude is unavailable
+                      </p>
+                    </div>
+                    {geminiKeyConfigured && !showGeminiKeyInput && (
+                      <button
+                        onClick={() => setShowGeminiKeyInput(true)}
+                        className="text-sm font-semibold text-[#B8960C] shrink-0"
+                      >
+                        Update
+                      </button>
+                    )}
+                  </div>
+
+                  {geminiKeyConfigured && !showGeminiKeyInput ? (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-green-50 rounded-xl">
+                      <span className="text-xs font-medium text-[#16A34A]">API key configured</span>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={geminiKeyInput}
+                        onChange={e => setGeminiKeyInput(e.target.value)}
+                        placeholder="AIzaSy…"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                      />
+                      <div className="flex gap-2">
+                        {geminiKeyConfigured && (
+                          <button
+                            onClick={() => { setShowGeminiKeyInput(false); setGeminiKeyInput('') }}
+                            className="flex-1 py-2.5 rounded-full border border-gray-200 text-gray-600 text-sm font-medium"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        <button
+                          onClick={handleSaveGeminiKey}
+                          disabled={savingGeminiKey}
+                          className="flex-1 py-2.5 rounded-full bg-[#B8960C] text-white font-semibold text-sm disabled:opacity-40"
+                        >
+                          {savingGeminiKey ? 'Saving…' : 'Save Key'}
                         </button>
                       </div>
                     </div>
