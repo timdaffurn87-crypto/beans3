@@ -341,13 +341,15 @@ export default function EODPage() {
   }
 
   /**
-   * Resubmit — re-fetches all café day data so the summary reflects any
-   * changes made since the last submit (e.g. additional waste entries, tasks
-   * completed, invoices scanned), then resets UI state so the form is editable again.
+   * Resubmit — re-fetches all café day data so the summary reflects the latest
+   * state (any waste, tasks, invoices added since the first submit), then forces
+   * alreadySubmitted back to false so the form is editable.
+   *
+   * Note: fetchDayData() will set alreadySubmitted(true) because the record exists —
+   * we override that immediately after it returns.
    */
   async function handleResubmit() {
     setSubmitted(false)
-    setAlreadySubmitted(false)
     setTillBalanced(null)
     setTillDiscrepancyAmount('')
     setTillExplanation('')
@@ -355,6 +357,9 @@ export default function EODPage() {
     setNotes('')
     setLoadingData(true)
     await fetchDayData()
+    // fetchDayData sets alreadySubmitted(true) because the record exists —
+    // override it so the form renders instead of the "Day Closed" screen
+    setAlreadySubmitted(false)
   }
 
   // ─── Computed values ───────────────────────────────────────────────────────
