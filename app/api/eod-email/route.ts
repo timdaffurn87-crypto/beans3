@@ -54,7 +54,7 @@ export async function POST(request: Request) {
       // Build email payload — attach CSV if we have one with line items
       // Resend expects attachments as base64-encoded content
       const emailPayload: Record<string, unknown> = {
-        from: 'Beans <noreply@beans.cocoacafe.com.au>',
+        from: 'Beans <onboarding@resend.dev>',
         to: ownerEmail,
         subject,
         html,
