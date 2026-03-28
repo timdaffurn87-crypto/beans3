@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 
 const items = [
+  { href: '/my-roster', label: 'My Roster', desc: 'View your upcoming shifts', icon: '📅' },
   { href: '/invoice', label: 'Scan Invoice', desc: 'Capture delivery receipts', icon: '📄' },
   { href: '/recipes', label: 'Recipe Book', desc: 'Browse recipes', icon: '📖' },
   { href: '/eod', label: 'End of Day', desc: 'Submit shift report', icon: '🌙' },
