@@ -87,7 +87,7 @@ export interface Invoice {
   cafe_day: string
   created_at: string
   xero_invoice_id: string | null     // Xero Invoice ID once pushed; null = not yet sent
-  xero_sync_status: 'pending' | 'synced' | 'failed'  // tracks cron sync state
+  xero_sync_status: 'pending' | 'synced' | 'failed' | 'review'  // 'review' = gst_flagged, held back from batch until resolved
   xero_synced_at: string | null      // timestamp of last successful Xero sync
   tax_type: 'INCLUSIVE' | 'EXCLUSIVE' | 'NOTAX' | null  // Xero LineAmountTypes value
   gst_flagged: boolean               // true when AI cannot determine GST treatment

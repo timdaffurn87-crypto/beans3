@@ -243,6 +243,10 @@ export default function InvoicePage() {
       // Calculate total from line items (quantity × unit_amount)
       const totalAmount = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_amount), 0)
 
+      // gst_flagged invoices get xero_sync_status='review' — they are excluded
+      // from the 3 PM batch until a manager resolves the GST treatment manually.
+      const xeroSyncStatus = gstFlagged ? 'review' : 'pending'
+
       const { error } = await supabase.from('invoices').insert({
         scanned_by: profile.id,
         supplier_name: supplierName.trim(),
@@ -258,6 +262,7 @@ export default function InvoicePage() {
         cafe_day: cafeDay,
         gst_flagged: gstFlagged,
         tax_type: taxType,
+        xero_sync_status: xeroSyncStatus,
       })
 
       if (error) { showToast(error.message, 'error'); return }
@@ -444,13 +449,17 @@ export default function InvoicePage() {
               </div>
             )}
 
-            {/* GST unclear warning — shown when AI cannot determine GST treatment */}
+            {/* GST flagged warning — shown when AI cannot determine GST treatment.
+                This invoice will be saved as xero_sync_status='review' and
+                excluded from the 3 PM Xero batch until resolved. */}
             {gstFlagged && (
               <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
-                <span className="text-amber-500 text-lg shrink-0">⚠️</span>
+                <span className="text-amber-500 text-xl shrink-0 mt-0.5">⚠️</span>
                 <div>
-                  <p className="text-sm font-semibold text-amber-700">GST type unclear</p>
-                  <p className="text-xs text-amber-600 mt-0.5">Please ask your manager before end of day</p>
+                  <p className="text-sm font-semibold text-amber-700">GST type unclear — flagged for review</p>
+                  <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
+                    This invoice will be saved but held back from Xero sync. Ask your manager to set the correct GST treatment before end of day.
+                  </p>
                 </div>
               </div>
             )}
@@ -642,6 +651,23 @@ export default function InvoicePage() {
                         }`}>
                           {invoice.status === 'submitted' ? 'Submitted' : 'Pending'}
                         </span>
+
+                        {/* Xero sync status badge */}
+                        {invoice.xero_sync_status === 'synced' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-[#16A34A]">
+                            ✓ Xero
+                          </span>
+                        )}
+                        {invoice.xero_sync_status === 'failed' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-50 text-[#DC2626]">
+                            Xero failed
+                          </span>
+                        )}
+                        {invoice.xero_sync_status === 'review' && (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-[#D97706]">
+                            ⚠️ GST review
+                          </span>
+                        )}
 
                         {invoice.ai_confidence && (
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${

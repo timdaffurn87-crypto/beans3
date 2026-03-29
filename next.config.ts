@@ -12,6 +12,13 @@ const withPWA = withPWAInit({
 const nextConfig: NextConfig = {
   // Suppress Turbopack/webpack config conflict from PWA plugin
   turbopack: {},
+
+  // Include the Xero reference CSV files in Vercel's output bundle so that
+  // lib/invoiceReferenceData.ts can read them via fs.readFileSync at runtime.
+  // Without this, the /data/ directory is not copied into the serverless function.
+  outputFileTracingIncludes: {
+    '/api/ai-extract-invoice': ['./data/**'],
+  },
 };
 
 export default withPWA(nextConfig);

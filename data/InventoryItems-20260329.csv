@@ -1,0 +1,608 @@
+*ItemCode,ItemName,Quantity,PurchasesDescription,PurchasesUnitPrice,PurchasesAccount,PurchasesTaxRate,SalesDescription,SalesUnitPrice,SalesAccount,SalesTaxRate,InventoryAssetAccount,CostOfGoodsSoldAccount,Status,InventoryType
+000,SDT STRIPS,,SDT STRIPS,23.00,310,GST Free Expenses,,,,,,,Active,Untracked
+01,Bondi Shirts & Emroidery,,Bondi Shirts & Emroidery,46.30,321,GST on Expenses,,,,,,,Active,Untracked
+100,Loose eggs 600g,,Loose eggs 600g,52.00,310,GST Free Expenses,,,,,,,Active,Untracked
+10001,GreenPro Dishwash Det,,GreenPro Dishwash Det,99.95,408,GST on Expenses,,,,,,,Active,Untracked
+1001,SHUCK OYSTERS,,,,,,SHUCK OYSTERS,288.00,260,GST on Income,,,Active,Untracked
+100158,Hummingbird Cake,,Hummingbird Cake,35.99,310,GST on Expenses,,,,,,,Active,Untracked
+10020,Rinse All,,Rinse All,102.36,408,GST on Expenses,,,,,,,Active,Untracked
+10033D,Hand Soap,,Hand Soap,126.20,408,GST on Expenses,,,,,,,Active,Untracked
+10167,MAPLE SYRUP,,MAPLE SYRUP,18.06,310,GST Free Expenses,,,,,,,Active,Untracked
+10276,Degreaser,,Degreaser,41.2727,408,GST on Expenses,,,,,,,Active,Untracked
+10279,Dose N Fill Sanitiser,,Dose N Fill Sanitiser,108.48,408,GST on Expenses,,,,,,,Active,Untracked
+104614,SALMON,,SALMON,130.32,310,GST Free Expenses,,,,,,,Active,Untracked
+104621,BBQ Sauce,,BBQ Sauce,10.36,310,GST Free Expenses,,,,,,,Active,Untracked
+107532,GREASEPROOF PAPER,,GREASEPROOF PAPER,29.33,PACK,GST on Expenses,,,,,,,Active,Untracked
+108226,Hash Browns Oval Edgell,,Hash Browns Oval Edgell,10.50,310,GST Free Expenses,,,,,,,Active,Untracked
+108644,Flathead Flt,,Flathead Flt Beer Battered,54.28,310,GST on Expenses,,,,,,,Active,Untracked
+109158,Muffin Wrap Parchment Carton,,Muffin Wrap Parchment Carton,52.83,310,GST on Expenses,,,,,,,Active,Untracked
+110684,MILKSHAKE CUPS,,MILKSHAKE CUPS,4.67,PACK,GST on Expenses,,,,,,,Active,Untracked
+110686,Milkshake Lids,,Milkshake Lids,3.75,PACK,GST on Expenses,,,,,,,Active,Untracked
+112375,Dukkah,,Dukkah,25.80,310,GST Free Expenses,,,,,,,Active,Untracked
+114511,Spring Rolls,,Spring Rolls,29.17,310,GST Free Expenses,,,,,,,Active,Untracked
+115142,Sauce Cranberry,,Sauce Cranberry,20.07,310,GST Free Expenses,,,,,,,Active,Untracked
+116157,Passionfruit Cheesecake,,Passinfruit CH,44.08,310,GST on Expenses,,,,,,,Active,Untracked
+11831,Passionfruit Pulp,,Passionfruit Pulp,2.95,310,GST Free Expenses,,,,,,,Active,Untracked
+123,GASFITTING,,GASFITTING,0.00,473,GST on Expenses,,,,,,,Active,Untracked
+12428,CHOC BUTTONS,,CHOC BUTTONS,49.05,310,GST Free Expenses,,,,,,,Active,Untracked
+12661,SALT 10KG,,SALT 10KG,6.78,460,GST Free Expenses,,,,,,,Active,Untracked
+127,Roll Towel 80mx16,,Roll Towel 80mx16,43.64,408,GST on Expenses,,,,,,,Active,Untracked
+128399,Squid Fillets Pineapple Cut,,Squid Fillets Pineapple Cut,54.43,310,GST Free Expenses,,,,,,,Active,Untracked
+129723,Orange Juice,,Orange Juice,26.55,310,GST Free Expenses,,,,,,,Active,Untracked
+129724,Apple Juice,,Apple Juice,26.55,310,GST Free Expenses,,,,,,,Active,Untracked
+1310,Fitout Contribution,,,,,,,,,,,,Active,Untracked
+1313,Fitout Contribution,,,,,,,,,,,,Active,Untracked
+131899,Cocktail Napkins,,Cocktail Napkins,3.09,PACK,GST on Expenses,,,,,,,Active,Untracked
+132460,GLUTEN FREE FLOUR,,GLUTEN FREE FLOUR,38.00,310,GST Free Expenses,,,,,,,Active,Untracked
+135834,Mayonnaise Aioli,,Mayonnaise Aioli,7.62,310,GST Free Expenses,,,,,,,Active,Untracked
+137252,Hommus Squeeze,,Hommus Squeeze,10.26,310,GST Free Expenses,,,,,,,Active,Untracked
+140722,Sparkling Water,,Sparkling Water,35.13,310,GST on Expenses,,,,,,,Active,Untracked
+141694,Hazelnut Syrup,,Hazelnut Syrup,13.12,310,GST on Expenses,,,,,,,Active,Untracked
+141695,Caramel Syrup,,Caramel Syrup,17.84,310,GST on Expenses,,,,,,,Active,Untracked
+141697,Vanilla Syrup,,Vanilla Syrup,13.12,310,GST on Expenses,,,,,,,Active,Untracked
+146092,Pulled Pork,,Pulled Pork,12.65,310,GST Free Expenses,,,,,,,Active,Untracked
+146179,Strawberry Cheesecake P/C,,Strawberry Cheesecake P/C,21.04,310,GST on Expenses,,,,,,,Active,Untracked
+146180,Citrus Tarts G/F PC,,Citrus Tarts G/F PC,19.82,310,GST on Expenses,,,,,,,Active,Untracked
+146184,Red Velvet Slice,,Red Velvet Slice,53.10,310,GST on Expenses,,,,,,,Active,Untracked
+14637,Stock Vegeta,,Stock Vegeta,13.17,310,GST Free Expenses,,,,,,,Active,Untracked
+147560,FRY OIL,,FRY OIL,61.10,460,GST Free Expenses,,,,,,,Active,Untracked
+150 Lashes,150 Lashes,,150 Lashes,22.99,310,GST on Expenses,,,,,,,Active,Untracked
+150721,Gloves Medium,,Gloves Medium,5.90,408,GST on Expenses,,,,,,,Active,Untracked
+151200,AIOLI,,AILOI,8.04,310,GST Free Expenses,,,,,,,Active,Untracked
+151844,Tiramisu Slice,,Tiramisu Slice,39.88,310,GST on Expenses,,,,,,,Active,Untracked
+152311,Mussels Half Shell,,Mussels Half Shell,16.46,310,GST Free Expenses,,,,,,,Active,Untracked
+156647,Tortilla Wraps,,Tortilla Wraps,4.07,310,GST Free Expenses,,,,,,,Active,Untracked
+156753,perch,,perch,95.11,310,GST Free Expenses,,,,,,,Active,Untracked
+156763,Spring Rolls Peking Duck,,Spring Rolls Peking Duck,13.58,310,GST Free Expenses,,,,,,,Active,Untracked
+158638,Sweet Chilli Sauce,,Sauce Sweet Chilli Gluten Free,14.64,310,GST on Expenses,,,,,,,Active,Untracked
+159631,cream cheese,,cream cheese,11.85,310,GST Free Expenses,,,,,,,Active,Untracked
+159698,Relish Tomato,,Relish Tomato,26.72,310,GST Free Expenses,,,,,,,Active,Untracked
+159833,BRISKET,,BRISKET,14.01,310,GST Free Expenses,,,,,,,Active,Untracked
+159917,roasted peppers,,roasted peppers,14.45,310,GST Free Expenses,,,,,,,Active,Untracked
+160278,Teriyaki Sauce Thick,,Teriyaki Sauce Thick,21.25,310,GST Free Expenses,,,,,,,Active,Untracked
+160650,Danish Fetta,,Danish Fetta,15.99,310,GST Free Expenses,,,,,,,Active,Untracked
+1625,Seeded Mustard,,Seeded Mustard,20.10,310,GST Free Expenses,,,,,,,Active,Untracked
+162650,COCONUT CHIPS,,COCONUT CHIPS,14.53,310,GST Free Expenses,,,,,,,Active,Untracked
+163099,Mussels,,Mussels In Half Shell Green Medium NZ,16.92,310,GST Free Expenses,,,,,,,Active,Untracked
+163560,CANNELLINI BEANS,,CANNELLINI BEANS,8.11,310,GST Free Expenses,,,,,,,Active,Untracked
+164190,BAO BUNS,,BAO BUNS,8.15,310,GST Free Expenses,,,,,,,Active,Untracked
+165812,Sourdough,,Sourdough,43.44,310,GST Free Expenses,,,,,,,Active,Untracked
+165955,Gherkins,,Gherkins,10.85,310,GST Free Expenses,,,,,,,Active,Untracked
+166631,Bacon Primo,,Bacon Primo,25.00,310,GST Free Expenses,,,,,,,Active,Untracked
+167469,Sour Cream,,Sour Cream,16.61,310,GST on Expenses,,,,,,,Active,Untracked
+167694,FISH COCKTAILS,,FISH COCKTAILS,13.70,310,GST Free Expenses,,,,,,,Active,Untracked
+168461,Passionfruit Slice,,Passionfruit Slice,17.75,310,GST on Expenses,,,,,,,Active,Untracked
+169103,DOME LIDS,,DOME LIDS,8.04,PACK,GST on Expenses,,,,,,,Active,Untracked
+169350,BURGER BOX XLARGE,,BURGER BOX XLARGE,19.83,PACK,GST on Expenses,,,,,,,Active,Untracked
+16OZCUPSLV,16OZ T/A CUPS Sleeve,,Cup T/A Botero 16oz (500/box),9.25,PACK,GST on Expenses,,,,,,,Active,Untracked
+170016,TURKISH ROLLS,,TURKISH ROLLS,53.98,310,GST Free Expenses,,,,,,,Active,Untracked
+17016,Hash Browns,,Hash Browns Oval,7.85,310,GST Free Expenses,,,,,,,Active,Untracked
+170607,Prawn Cutlets,,Prawn Cutlets 26/30 Vannamei Raw,22.95,310,GST Free Expenses,,,,,,,Active,Untracked
+171309,HALOUMI,,HALOUMI,21.59,310,GST Free Expenses,,,,,,,Active,Untracked
+171627,Basil Pesto,,Basil Pesto,24.47,310,GST Free Expenses,,,,,,,Active,Untracked
+171881,Turkish Bread,,Bread Turkish Long Wrapped,20.72,310,GST Free Expenses,,,,,,,Active,Untracked
+172092,Milk Lactose Free,,Milk Lactose Free,2.05,310,GST Free Expenses,,,,,,,Active,Untracked
+17288,Thickened Cream,,Thickened Cream,38.91,310,GST Free Expenses,,,,,,,Active,Untracked
+172904,Smoked Salmon,,Smoked Salmon,29.95,310,GST Free Expenses,,,,,,,Active,Untracked
+173299,Almond Milk Milk Lab,,Almond Milk Milk Lab,3.82,310,GST Free Expenses,,,,,,,Active,Untracked
+173302,Milk Lab Soy,,Milk Lab Soy,2.75,310,GST Free Expenses,,,,,,,Active,Untracked
+174227,BARRAMUNDI,,BARRAMUNDI,145.38,310,GST Free Expenses,,,,,,,Active,Untracked
+174629,Paper Straws,,Paper Straws,3.42,PACK,GST on Expenses,,,,,,,Active,Untracked
+17960,YOGHURT,,YOGHURT,4.66,310,GST Free Expenses,,,,,,,Active,Untracked
+180104,Ruby Tuesday,,Ruby Tuesday,31.73,310,GST Free Expenses,,,,,,,Active,Untracked
+181864,prawns,,prawns,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+181869,PRAWN MEAT,,PRAWN MEAT,17.91,310,GST Free Expenses,,,,,,,Active,Untracked
+181926,SANDWICH GERKINS,,SANDWICH GERKINS,12.68,310,GST Free Expenses,,,,,,,Active,Untracked
+183968,CHIPS,,CHIPS,36.00,310,GST Free Expenses,,,,,,,Active,Untracked
+184212,Turkish Rolls,,Turkish Rolls,24.78,310,GST Free Expenses,,,,,,,Active,Untracked
+184484,TASTY CHEESE,,TASTY CHEESE,16.39,310,GST on Expenses,,,,,,,Active,Untracked
+185996,parmesan alfinas,,parmesan alfinas,17.20,310,GST Free Expenses,,,,,,,Active,Untracked
+185999,Orange Juice Harvest,,Orange Juice Harvest,28.65,310,GST Free Expenses,,,,,,,Active,Untracked
+187235,Bread Milk Buns,,Bread Milk Buns,29.50,310,GST Free Expenses,,,,,,,Active,Untracked
+188282,BIO CUPS,,BIO CUPS,8.97,PACK,GST on Expenses,,,,,,,Active,Untracked
+188318,Oat Milk,,Oat Milk,3.05,310,GST Free Expenses,,,,,,,Active,Untracked
+189362,Lemon Juice,,Lemon Juice,2.83,310,GST Free Expenses,,,,,,,Active,Untracked
+189373,WHIP BULBS,,WHIP BULBS,8.03,460,GST Free Expenses,,,,,,,Active,Untracked
+189617,Parmesan,,Parmesan,18.60,310,GST Free Expenses,,,,,,,Active,Untracked
+190015,Cornflour,,Cornflour,22.95,310,GST Free Expenses,,,,,,,Active,Untracked
+190018,QUINOA TRI COLOUR,,QUINOA TRI COLOUR,7.64,310,GST Free Expenses,,,,,,,Active,Untracked
+191428,Banoffee Tart,,Banoffee,17.15,310,GST Free Expenses,,,,,,,Active,Untracked
+191700,Memphis Spice,,Memphis Spice,18.69,310,GST Free Expenses,,,,,,,Active,Untracked
+1919,Fitout Contribution,,,,,,Fitout Contribution,0.00,,,,,Active,Untracked
+195144,Pesto,,Pesto,12.95,310,GST Free Expenses,,,,,,,Active,Untracked
+1956,Peanut Butter Smooth,,Peanut Butter Smooth,21.83,310,GST Free Expenses,,,,,,,Active,Untracked
+196309,SMOKED SALMON 300GM,,SMOKED SALMON 300GM,9.07,310,GST Free Expenses,,,,,,,Active,Untracked
+196902,Tuxedo,,Tuxedo,39.65,310,GST on Expenses,,,,,,,Active,Untracked
+197269,BURGER BOX,,BURGER BOX,8.79,PACK,GST on Expenses,,,,,,,Active,Untracked
+197270,SNACKBOX LGE,,SNACKBOX LGE,12.09,PACK,GST on Expenses,,,,,,,Active,Untracked
+198418,BALSAMIC GLAZE,,BALSAMIC GLAZE,7.59,310,GST Free Expenses,,,,,,,Active,Untracked
+201831,CHORIZO,,CHORIZO,34.81,310,GST Free Expenses,,,,,,,Active,Untracked
+202196,Oat Milk,,Oat Milk,3.75,310,GST Free Expenses,,,,,,,Active,Untracked
+202570,CORNFLOUR,,CORNFLOUR,10.24,310,GST Free Expenses,,,,,,,Active,Untracked
+204320,KIng Dory,,KIng Dory,55.40,310,GST Free Expenses,,,,,,,Active,Untracked
+204431,OCEAN TROUT,,OCEAN TROUT,97.50,310,GST Free Expenses,,,,,,,Active,Untracked
+206266,ONION RINGS,,ONION RINGS,16.15,310,GST Free Expenses,,,,,,,Active,Untracked
+208496,BARRA TAIL ON,,BARRA TAIL ON,107.85,310,GST Free Expenses,,,,,,,Active,Untracked
+211541,THICKENED CREAM,,THICKENED CREAM,20.32,310,GST Free Expenses,,,,,,,Active,Untracked
+233,Caramel Topping,,Caramel Topping,8.39,310,GST Free Expenses,,,,,,,Active,Untracked
+234,Topping Chocolate,,Topping Chocolate,8.39,310,GST Free Expenses,,,,,,,Active,Untracked
+24,HONEY,,HONEY,23.56,310,GST Free Expenses,,,,,,,Active,Untracked
+24072,Apple Cider Vinegar,,Apple Cider Vinegar,14.91,310,GST Free Expenses,,,,,,,Active,Untracked
+25,Roll Towel,,Roll Towel,49.09,460,GST on Expenses,,,,,,,Active,Untracked
+256767,Barra Skin On,,Barra Skin On,70.00,310,GST Free Expenses,,,,,,,Active,Untracked
+26,Super Economy 20 L Dishwash Det,,Super Economy 20 L Dishwash Det,22.73,408,GST on Expenses,,,,,,,Active,Untracked
+28164,WHOLE TOMATOES,,WHOLE TOMATOES,5.76,310,GST Free Expenses,,,,,,,Active,Untracked
+34,Vegetable Oil,,Vegetable Oil,40.00,460,GST Free Expenses,,,,,,,Active,Untracked
+35,Arome Fry Oil,,Arome Fry Oil,79.00,460,GST Free Expenses,,,,,,,Active,Untracked
+3567,VEG OIL,,VEG OIL,54.67,460,GST Free Expenses,,,,,,,Active,Untracked
+37,Vegetable Oil 20L,,Vegetable Oil 20L,39.00,460,GST Free Expenses,,,,,,,Active,Untracked
+37065,Death By Choc,,Death By Choc,37.23,310,GST on Expenses,,,,,,,Active,Untracked
+37074,Torte Coconut & Mango,,Torte Coconut & Mango,37.93,310,GST on Expenses,,,,,,,Active,Untracked
+37080,Wildberry Chesecake,,Wildberry Chesecake,45.74,310,GST on Expenses,,,,,,,Active,Untracked
+37083,PECAN PIE,,PECAN PIE,33.74,310,GST on Expenses,,,,,,,Active,Untracked
+37180,FROZEN YOGHURT,,FROZEN YOGHURT,31.14,310,GST on Expenses,,,,,,,Active,Untracked
+39,20LT Riverina Frying Oil,,20LT Riverina Frying Oil,46.00,310,GST Free Expenses,,,,,,,Active,Untracked
+3COWS,Danish Feta,,Danish Feta,52.10,310,GST Free Expenses,,,,,,,Active,Untracked
+3fw,Paper bags,,Paper bags,14.60,PACK,GST on Expenses,,,,,,,Active,Untracked
+4 cup tray,4 cup tray,,4 cuo tray,10.91,PACK,GST on Expenses,,,,,,,Active,Untracked
+4384,Hollandaise Sauce,,Sauce Hollandaise Garde Dor Tetra,10.19,310,GST on Expenses,,,,,,,Active,Untracked
+44067,GB Snapper,,GB Snapper,106.24,310,GST Free Expenses,,,,,,,Active,Untracked
+4885,Vanilla Essence,,Vanilla Essence,12.60,310,GST Free Expenses,,,,,,,Active,Untracked
+4cte,4 cup tray,,4 cup tray,15.13,PACK,GST on Expenses,,,,,,,Active,Untracked
+55770,PEPPER CRACKED,,PEPPER CRACKED,17.06,310,GST Free Expenses,,,,,,,Active,Untracked
+55775,LEMON PEPPER,,LEMON PEPPER,16.96,310,GST Free Expenses,,,,,,,Active,Untracked
+56340,Self Raising Flour,,Self Raising Flour,12.19,310,GST Free Expenses,,,,,,,Active,Untracked
+58865,Vinegar 15l,,Vinegar 15l,20.42,310,GST Free Expenses,,,,,,,Active,Untracked
+59003,ICE CREAM,,ICE CREAM,32.40,310,GST on Expenses,,,,,,,Active,Untracked
+6,FRYOLA,,FRYOLA,59.00,460,GST Free Expenses,,,,,,,Active,Untracked
+6326,VEGETABLE OIL,,VEGETABLE OIL,40.76,460,GST Free Expenses,,,,,,,Active,Untracked
+63971,Pistachio Kernels,,Pistachio Kernels,49.62,310,GST Free Expenses,,,,,,,Active,Untracked
+63974,WALNUTS,,WALNUTS,14.50,310,GST Free Expenses,,,,,,,Active,Untracked
+643,Cream Cheese,,Cream Cheese,17.85,310,GST Free Expenses,,,,,,,Active,Untracked
+64998,WHITE CHOC BUTTONS,,WHITE CHOC BUTTONS,12.22,310,GST Free Expenses,,,,,,,Active,Untracked
+64999,COCOA POWDER,,COCOA POWDER,17.01,460,GST Free Expenses,,,,,,,Active,Untracked
+65031,Icing Sugar,,Icing Sugar,12.59,310,GST Free Expenses,,,,,,,Active,Untracked
+65033,Caster Sugar,,Caster Sugar,7.72,310,GST on Expenses,,,,,,,Active,Untracked
+65177,Garbage Bags,,Garbage Bags,3.32,PACK,GST on Expenses,,,,,,,Active,Untracked
+67121,almond meal,,almond meal,21.31,310,GST Free Expenses,,,,,,,Active,Untracked
+67826,VEGETABLE OIL,,VEGETABLE OIL,45.59,310,GST Free Expenses,,,,,,,Active,Untracked
+6792,Blueberry Almond Tart,,Blueberry Almond Tart,37.81,310,GST on Expenses,,,,,,,Active,Untracked
+68034,CITRUS TART,,CITRUS TART,35.14,310,GST on Expenses,,,,,,,Active,Untracked
+68650,TOMATOE CHOPPED,,TOMATOE CHOPPED,6.51,310,GST Free Expenses,,,,,,,Active,Untracked
+6956,Butter,,Butter Unsalted,55.70,310,GST on Expenses,,,,,,,Active,Untracked
+7,BVO15,,BVO15,63.00,460,GST Free Expenses,,,,,,,Active,Untracked
+74935,FOIL,,FOIL,26.19,PACK,GST on Expenses,,,,,,,Active,Untracked
+75569,Margarine,,Margarine,34.26,460,GST Free Expenses,,,,,,,Active,Untracked
+76990,Laksa Paste,,Laksa Paste,3.36,310,GST Free Expenses,,,,,,,Active,Untracked
+77441,Turkish Vegan,,Turkish Vegan,61.36,310,GST Free Expenses,,,,,,,Active,Untracked
+81481,EGGS,,EGGS,51.80,310,GST Free Expenses,,,,,,,Active,Untracked
+83717,Citrus Tart Idividual,,Citrus Tart Idividual,17.09,310,GST on Expenses,,,,,,,Active,Untracked
+83759,Lemon Meringue Tart,,Lemon Meringue Tart,16.78,310,GST on Expenses,,,,,,,Active,Untracked
+83787,carrot cake,,carrot cake,29.99,310,GST on Expenses,,,,,,,Active,Untracked
+85865,Lamb Shanks,,Lamb Shanks,9.20,310,GST Free Expenses,,,,,,,Active,Untracked
+86089,Sate Sauce Jimmys,,Sate Sauce Jimmys,10.22,310,GST Free Expenses,,,,,,,Active,Untracked
+87021,Ginger Crushed,,Ginger Crushed,8.91,310,GST Free Expenses,,,,,,,Active,Untracked
+87137,Blueberries,,Blueberries IQF,9.52,310,GST on Expenses,,,,,,,Active,Untracked
+87139,Raspberries Frozen,,Raspberries Frozen,8.90,310,GST Free Expenses,,,,,,,Active,Untracked
+87140,Strawberries Frozen,,Strawberries Frozen,7.91,310,GST Free Expenses,,,,,,,Active,Untracked
+87417,Mango Cheeks IQF,,Mango Cheeks IQF,10.99,310,GST Free Expenses,,,,,,,Active,Untracked
+87419,MIXED BERRIES,,MIXED BERRIES,7.64,310,GST Free Expenses,,,,,,,Active,Untracked
+885,TABLE SALT,,TABLE SALT,17.55,310,GST Free Expenses,,,,,,,Active,Untracked
+8OZCUPSLV,8oz T/A Cups Sleeve,,CUP T/A Botero 08oz (box/1000),3.00,310,GST on Expenses,,,,,,,Active,Untracked
+94566,Cheese Slices,,Cheese Slices 1.5 Caterers Choice,16.39,310,GST Free Expenses,,,,,,,Active,Untracked
+953349,Coca Cola No sugar 330ml,,Coca Cola No sugar 330ml,42.58,310,GST on Expenses,,,,,,,Active,Untracked
+954827,Lemon Lime Bitters Cascade,,Lemon Lime Bitters Cascade,38.58,310,GST on Expenses,,,,,,,Active,Untracked
+954832,Cascade Ginger Beer,,Cascade Ginger Beer,38.58,310,GST on Expenses,,,,,,,Active,Untracked
+956441,330ml Coca-Cola Glass,,330ml Coca-Cola Glass,42.58,310,GST on Expenses,,,,,,,Active,Untracked
+956478,330ml Sprite Glass,,Sprite,42.58,310,GST on Expenses,,,,,,,Active,Untracked
+961453,Canadian Club Dry,,Canadian Club Dry,66.25,310,GST on Expenses,,,,,,,Active,Untracked
+96280,white choc pecan tarts,,white choc pecan tarts,18.39,310,GST on Expenses,,,,,,,Active,Untracked
+99890,BASA,,BASA,38.05,310,GST Free Expenses,,,,,,,Active,Untracked
+ABC,Sweet Soy,,Sweet Soy,4.87,310,GST Free Expenses,,,,,,,Active,Untracked
+abers,Berry Smoothie Mix,,Berry Smoothie Mix,16.00,310,GST on Expenses,,,,,,,Active,Untracked
+AGL,Electricity,,Electricity,0.00,445,GST on Expenses,,,,,,,Active,Untracked
+ALBA,Parmesan,,Parmesan,19.76,310,GST Free Expenses,,,,,,,Active,Untracked
+ALLIE,SR Flour,,SR Flour,15.00,310,GST Free Expenses,,,,,,,Active,Untracked
+amans,Mango Smoothie Mix,,Mango Smoothie Mix,16.00,310,GST on Expenses,,,,,,,Active,Untracked
+ANC,Butter Unsalted,,Butter Unsalted,57.00,310,GST Free Expenses,,,,,,,Active,Untracked
+APANI M/WATER,APANI MINERAL WATER,,APANI MINERAL WATER,41.15,310,GST on Expenses,,,,,,,Active,Untracked
+APJ,Green Apples,,Green Apples,2.50,310,GST Free Expenses,,,,,,,Active,Untracked
+APPLE BERRY TART,APPLE BERRY TART,,APPLE BERRY TART,18.95,310,GST on Expenses,,,,,,,Active,Untracked
+Apron Starps,Apron Straps,,Apron Straps,7.70,321,GST on Expenses,,,,,,,Active,Untracked
+Apron Straps,Apron Straps,,Apron Straps,7.70,321,GST on Expenses,,,,,,,Active,Untracked
+AROME,FRY OIL,,FRY OIL,69.00,460,GST Free Expenses,,,,,,,Active,Untracked
+ASP,Aspragus,,Aspragus,4.50,310,GST Free Expenses,,,,,,,Active,Untracked
+atur750,Tumeric Syrup,,Tumeric Syrup,25.08,310,GST on Expenses,,,,,,,Active,Untracked
+AV,Avocado Hass,,Avocado Hass - Each,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+AVLT,Avocados-Shepherd-Tray,,Avocadosn Shepherd,40.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Avocado,Box Avocados,,Box Avocados,60.00,310,GST Free Expenses,,,,,,,Active,Untracked
+AVT,Avocado Hass,,Avocado Hass (25) - Tray,45.00,310,GST on Expenses,,,,,,,Active,Untracked
+B*MINB22.5,Beef Mince,,Beef Mince - Lean (2.5KG PKT),10.50,310,GST on Expenses,,,,,,,Active,Untracked
+b16,Container Round 440ml,,Container Round 440ml,4.45,PACK,GST on Expenses,,,,,,,Active,Untracked
+B200,60ML PORTION,,60ML PORTION,19.25,PACK,GST on Expenses,,,,,,,Active,Untracked
+b22,Container Round,,Container Round,8.47,PACK,GST on Expenses,,,,,,,Active,Untracked
+b8,Container Round 280ml,,Container Round 280ml,4.95,PACK,GST on Expenses,,,,,,,Active,Untracked
+BAC302RG15,R/Less Bacon 5Kg,,R/Less Bacon 5Kg,56.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BAKER,TURKISH LOAF,,TURKISH LOAF,69.45,310,GST Free Expenses,,,,,,,Active,Untracked
+Baklava,Baklava,,Baklava,40.00,310,GST on Expenses,,,,,,,Active,Untracked
+BAN,Bananas,,Bananas,2.50,310,GST Free Expenses,,,,,,,Active,Untracked
+BANANA TOPPING,Banana Topping,,Banana Topping,8.45,310,GST Free Expenses,,,,,,,Active,Untracked
+BanBread,Banana Bread,,Banana Bread,22.10,310,GST on Expenses,,,,,,,Active,Untracked
+BAS,Basil,,Basil,4.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BBGB,GINGER BEER,,GINGER BEER,31.30,310,GST on Expenses,,,,,,,Active,Untracked
+BBLLB12,LEMOM LIME BITTERS,,LEMOM LIME BITTERS,15.65,310,GST Free Expenses,,,,,,,Active,Untracked
+BBRPEBOG,BRISKET,,BRISKET,15.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BC,Bok Choy,,Bok Choy,2.50,310,GST Free Expenses,,,,,,,Active,Untracked
+BCHTENT,Chuck Tenders,,Chuck Tenders,12.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BIO,Cocktail Napkins Box,,Cocktail Napkins Box,24.10,310,GST on Expenses,,,,,,,Active,Untracked
+Black Pepper,Black Pepper,,Black Pepper,9.68,310,GST Free Expenses,,,,,,,Active,Untracked
+blid,Lid Round,,Lid Round,2.74,PACK,GST on Expenses,,,,,,,Active,Untracked
+BLUEK,Prawn Cutlet Steamed,,Prawn Cutlet Steamed,17.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BM,BEANS,,BEANS,7.50,310,GST Free Expenses,,,,,,,Active,Untracked
+BMW,Car Loan,,Car Loan,320.00,449,GST on Expenses,,,,,,,Active,Untracked
+BONS,Bonsoy Almond,,Bonsoy Almond,25.61,310,GST Free Expenses,,,,,,,Active,Untracked
+BOPTCA,RIBS,,RIBS,25.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Botero Chocolate,Botero Rich Drinking Choc,,Botero Rich Drinking Choc,12.95,310,GST Free Expenses,,,,,,,Active,Untracked
+br1000,Container Rectangle 1000ml,,Container Rectangle 1000ml,8.19,PACK,GST on Expenses,,,,,,,Active,Untracked
+br650,Rect Lid 650ml,,Rect Lid 650ml,7.32,PACK,GST on Expenses,,,,,,,Active,Untracked
+Brass 250g Bean,Brass Botero 250g Bean,,Brass Botero 250g Bean,7.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Brass 250g Espresso,Brass 250g Espresso,,Brass 250g Espresso,7.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BRL,Broccolini,,Broccolni,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+brlid,Lid Rectangle,,Lid Rectangle,3.83,PACK,GST on Expenses,,,,,,,Active,Untracked
+Brown Sugar,Brown Sugar,,Brown Sugar,3.10,310,GST Free Expenses,,,,,,,Active,Untracked
+BRUGFTCA6,RUMP,,RUMP,18.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BRUYPT6,Rump,,Rump,14.60,310,GST Free Expenses,,,,,,,Active,Untracked
+BS,Bean Shoots,,Bean Shoots,2.30,310,GST Free Expenses,,,,,,,Active,Untracked
+BSCPRC3,SCOTCH FILLET,,SCOTCH FILLET,25.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BSCRCB5,Scotch Fillet,,"Scotch Fillet YPGF 76,69058 RCBV MSA 1 Smaller Piece",22.00,310,GST on Expenses,,,,,,,Active,Untracked
+BSCYP4T,Scotch Fillet,,Scotch Fillet,31.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BSCYPGF3T,Scotch Fillet YPGF 8406 TEYS,,Scotch Fillet YPGF 8406 TEYS,23.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BSGMI,Sausage Mince,,Sausage Mince,7.80,310,GST Free Expenses,,,,,,,Active,Untracked
+BTR,Beetroot,,Beetroot,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Bugs,Bugs,,Bugs,25.50,310,GST Free Expenses,,,,,,,Active,Untracked
+BULLA,Sour Cream,,Sour Cream,23.00,310,GST Free Expenses,,,,,,,Active,Untracked
+BUT10,Butter 10kg,,Butter 10kg,143.12,310,GST Free Expenses,,,,,,,Active,Untracked
+Butterball Chardonnay,Butterball Chardonnay,,Butterball Chardonnay,29.20,310,GST on Expenses,,,,,,,Active,Untracked
+Buttermilk,buttermilk,,buttermilk,2.90,310,GST Free Expenses,,,,,,,Active,Untracked
+BVO15,VEG OIL,,VEG OIL,63.00,460,GST Free Expenses,,,,,,,Active,Untracked
+CA,Carrots,,Carrots,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+CABR,Red Cabbage,,Red Cabbage,4.50,310,GST Free Expenses,,,,,,,Active,Untracked
+cafdot,Dotty Cookies,,Dotty Cookies,10.35,310,GST on Expenses,,,,,,,Active,Untracked
+cafsdg,Sticky Date Cookies,,Sticky Date Cookies,10.35,310,GST on Expenses,,,,,,,Active,Untracked
+CAKES,CAKES,,CAKES,0.00,310,GST on Expenses,,,,,,,Active,Untracked
+CANNELLINI BEANS,CANNELLINI BEANS,,CANNELLINI BEANS,6.25,310,GST Free Expenses,,,,,,,Active,Untracked
+Capers,Capers,,Capers,17.77,310,GST Free Expenses,,,,,,,Active,Untracked
+CAPRI,Vinyl Gloves,,Vinyl Gloves,7.46,PACK,GST on Expenses,,,,,,,Active,Untracked
+Caramel Syrup Botero,Caramel Syrup Botero,,Caramel Syrup Botero,14.90,310,GST on Expenses,,,,,,,Active,Untracked
+CAS208,Smoked Turkey Half Breast,,Smoked Turkey Half Breast,22.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Cash,Cash,,,,,,Cash,0.00,,,,,Active,Untracked
+CAST,Clingwrap,,Clingwrap,25.35,PACK,GST on Expenses,,,,,,,Active,Untracked
+Catering,Catering,,,,,,Catering,17.00,200,GST on Income,,,Active,Untracked
+Catering Supplies,Catering Supplies,,Catering Supplies,0.00,310,GST on Expenses,,,,,,,Active,Untracked
+Celery,Celery,,Celery,3.50,310,GST Free Expenses,,,,,,,Active,Untracked
+CH,Chillis,,Chillis,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+CH10243,TASTY CHEESE,,TASTY CHEESE16.5,20.79,310,GST Free Expenses,,,,,,,Active,Untracked
+Chai,Chai Powder,,Chai Powder,24.75,310,GST Free Expenses,,,,,,,Active,Untracked
+Chai Tea,Chai Tea,,Chai Tea,68.00,310,GST Free Expenses,,,,,,,Active,Untracked
+CHE,Quinoa,,Quinoa,9.00,310,GST Free Expenses,,,,,,,Active,Untracked
+CHEER,Tasty cheese,,Tasty cheese,15.80,310,GST Free Expenses,,,,,,,Active,Untracked
+Chef Service,Chef Service,,,,,,,,,,,,Active,Untracked
+CHI,Chives,,Chives,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+chi5,Greaseproof Paper,,Greaseproof Paper,17.38,PACK,GST on Expenses,,,,,,,Active,Untracked
+Chips Ultrafast,Chips,,Chips,32.25,310,GST Free Expenses,,,,,,,Active,Untracked
+CHTF,CHICKEN THIGH,,CHICKEN THIGH,10.60,310,GST Free Expenses,,,,,,,Active,Untracked
+Cider,5 Seeds Cider,,5 Seeds Cider,15.00,310,GST on Expenses,,,,,,,Active,Untracked
+Cinnamon Quills,Cinnamon Quills,,Cinnamon Quills,18.20,460,GST Free Expenses,,,,,,,Active,Untracked
+CITRUS TARTS,CITRUS TARTS IND,,CITRUS TARTS IND,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Citrus Tarts Mini,Citrus Tarts Mini,,Citrus Tarts Mini,16.00,310,GST on Expenses,,,,,,,Active,Untracked
+clambbx,Burger Box,,Burger Box,20.34,PACK,GST on Expenses,,,,,,,Active,Untracked
+Cleaning,Cleaning,,Cleaning,70.00,408,GST on Expenses,,,,,,,Active,Untracked
+CLEANING SUPPLIES,Cleaning Supplies,,Cleaning Supplies,0.00,460,GST on Expenses,,,,,,,Active,Untracked
+Clingwrap,Clingwrap,,Clingwrap,"2,388.00",PACK,GST on Expenses,,,,,,,Active,Untracked
+Cocktail Straws,Cocktail Straws,,Cocktail Straws,3.50,PACK,GST on Expenses,,,,,,,Active,Untracked
+Cocoa Powder,Cocoa Powder,,Cocoa Powder,22.00,310,GST Free Expenses,,,,,,,Active,Untracked
+COCOGINGER,GINGER COCONUT,,GINGER COCONUT,44.82,310,GST on Expenses,,,,,,,Active,Untracked
+Coconut. Chips,Coconut Chips,,Coconut Chips,12.54,460,GST Free Expenses,,,,,,,Active,Untracked
+COCONUTWATER,COCONUT WATER,,COCONUT WATER,44.82,310,GST Free Expenses,,,,,,,Active,Untracked
+COCOWATERMELON,WATERMELON COCONUT,,WATERMELON COCONUT,44.82,310,GST Free Expenses,,,,,,,Active,Untracked
+COFFEE,Brass Botero,,Brass Botero 1Kg,29.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Coffee Cards,Coffee Cards,,,,,,Coffee Cards,0.00,,,,,Active,Untracked
+COFFEE MACHINE PARTS,COFFEE MACHINE PARTS,,COFFEE MACHINE PARTS,41.25,429,GST on Expenses,,,,,,,Active,Untracked
+COFFEE SUPPLIES,COFFEE SUPPLIES,,COFFEE SUPPLIES,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Coffee Tray(2),Coffee Tray(2),,Coffee Tray(2),6.36,PACK,GST on Expenses,,,,,,,Active,Untracked
+CoffeeCleaner,Coffee Cleaner,,Coffee Cleaner,20.00,460,GST on Expenses,,,,,,,Active,Untracked
+Cold Brew Filters,Cold Brew Filters,,Cold Brew Filters,16.50,PACK,GST on Expenses,,,,,,,Active,Untracked
+Contractor,Chef Services,,Chef Services,0.00,330,GST Free Expenses,,,,,,,Active,Untracked
+COON,Tasty Cheese,,Tasty Cheese,15.80,310,GST Free Expenses,,,,,,,Active,Untracked
+COR,Coriander,,Coriander Market - Each,3.00,310,GST on Expenses,,,,,,,Active,Untracked
+Corn Flour Maize,Corn Flour,,Corn Flour,18.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Corona,Corona,,Corona,51.95,310,GST on Expenses,,,,,,,Active,Untracked
+Cottees Caramel,Caramel Topping,,Caramel Topping,8.30,310,GST Free Expenses,,,,,,,Active,Untracked
+CotteesChoc,Choc Topping,,Choc Topping,8.65,310,GST Free Expenses,,,,,,,Active,Untracked
+CPG,Capsicum Green,,Capsicum Green,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+CPR2,Capsicum Red,,Capsicum Red,5.50,310,GST Free Expenses,,,,,,,Active,Untracked
+CRA,Smoked Salmon,,Smoked Salmon,29.95,310,GST Free Expenses,,,,,,,Active,Untracked
+CRANBERRY,CRANBERRY SAUCE,,CRANBERRY SAUCE,20.75,310,GST Free Expenses,,,,,,,Active,Untracked
+CREDIT NOTE,CREDIT NOTE,,CREDIT NOTE,0.00,,,,,,,,,Active,Untracked
+CRM12000,Sour Cream,,Sour Cream,14.50,310,GST Free Expenses,,,,,,,Active,Untracked
+CRM12050,THICKENED CREAM,,THICKENED CREAM,14.672,310,GST Free Expenses,,,,,,,Active,Untracked
+CRMS12000,Sour Cream 2kg,,Sour Cream 2kg,15.50,310,GST Free Expenses,,,,,,,Active,Untracked
+CRMT12050,Pauls Thickened Cream 2Lt Btl,,Pauls Thickened Cream 2Lt Btl,13.10,310,GST Free Expenses,,,,,,,Active,Untracked
+Croissant,Croissants,,Croissants,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+CSR,Caster Sugar,,Caster Sugar,18.80,310,GST Free Expenses,,,,,,,Active,Untracked
+CUCT,Cucumber,,Cucumber Tele Large - Each,2.20,310,GST Free Expenses,,,,,,,Active,Untracked
+Cup T/A 12oz Box,Cup T/A 12oz Box,,Cup T/A 12oz Box,129.00,PACK,GST on Expenses,,,,,,,Active,Untracked
+Cup T/A 16oz,Cup T/A 16oz Sleeve,,Cup T/A 16oz Sleeve,4.50,PACK,GST on Expenses,,,,,,,Active,Untracked
+Cup T/A 4oz,4oz cups,,4oz cups,3.50,PACK,GST on Expenses,,,,,,,Active,Untracked
+Cup T/A 8oz Box,Cup 8oz Box,,Cup 8oz Box,83.50,PACK,GST on Expenses,,,,,,,Active,Untracked
+DAin,Milkshake Cups,,Milkshake Cups,3.30,PACK,GST on Expenses,,,,,,,Active,Untracked
+Damper Rolls,Damper Rolls,,Damper Rolls,8.80,310,GST Free Expenses,,,,,,,Active,Untracked
+DECAF,Decaf Black,,Decaf Black 250g whole Bean,8.75,310,GST on Expenses,,,,,,,Active,Untracked
+Desc,Descaler 5L,,Descaler 5L,36.36,460,GST on Expenses,,,,,,,Active,Untracked
+Desiccated Coconut,Coconut,,Coconut,7.50,310,GST Free Expenses,,,,,,,Active,Untracked
+DIL,Dill,,Dill,3.50,310,GST Free Expenses,,,,,,,Active,Untracked
+DMONT,Parmesan Shaved,,Parmesan Shaved,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+DOC,Dark Choc Buttons,,Dark Choc Buttons,40.00,310,GST Free Expenses,,,,,,,Active,Untracked
+DOME LIDS,DOME LIDS,,DOME LIDS,14.43,PACK,GST on Expenses,,,,,,,Active,Untracked
+Dried Dates,Dried Dates,,Dried Dates,4.54,310,GST Free Expenses,,,,,,,Active,Untracked
+Dukkah,Dukkah,,Dukkah,19.00,310,GST Free Expenses,,,,,,,Active,Untracked
+EARL GREY,EG,,EG,34.50,310,GST Free Expenses,,,,,,,Active,Untracked
+eb40,easy Bake,,easy Bake,35.75,PACK,GST on Expenses,,,,,,,Active,Untracked
+ECO,M/Shake Lids,,M/Shake Lids,6.45,PACK,GST on Expenses,,,,,,,Active,Untracked
+EDGE,Hash Browns,,Hash Browns,7.30,310,GST Free Expenses,,,,,,,Active,Untracked
+ELG,Basil Pesto,,Basil Pesto,24.70,310,GST Free Expenses,,,,,,,Active,Untracked
+Engish B/fast Tea,EBT,,EBT,33.50,310,GST Free Expenses,,,,,,,Active,Untracked
+English B/Fast Tea,English B/Fast Tea,,English B/Fast Tea,33.50,310,GST Free Expenses,,,,,,,Active,Untracked
+EP,Eggplant,,Eggplant,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Evans Tate Shiraz,Pile Driver,,Pile Driver,13.88,310,GST on Expenses,,,,,,,Active,Untracked
+EXHAUST CLEAN,EXHAUST CLEAN,,EXHAUST CLEAN,577.50,460,GST on Expenses,,,,,,,Active,Untracked
+FFLJ2B,LEATHERJACKET,,LEATHERJACKET,12.00,310,GST Free Expenses,,,,,,,Active,Untracked
+FFNP5B,NILE PERCH,,NILE PERCH,11.00,310,GST Free Expenses,,,,,,,Active,Untracked
+FFPEP3S0,Pearl Perch,,Pearl Perch,20.50,310,GST Free Expenses,,,,,,,Active,Untracked
+FFSAPNN200,Salmon Portions,,Salmon Portions,25.50,310,GST Free Expenses,,,,,,,Active,Untracked
+FFSNGN5E,Goldband Snapper,,Goldband Snapper,20.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Filter Clean,Filter Service,,Filter Service,494.62,408,GST on Expenses,,,,,,,Active,Untracked
+FINCO,Chicken Breast 2kg,,Chicken Breast 2kg,13.20,310,GST Free Expenses,,,,,,,Active,Untracked
+FLAKED ALMONDS,ALMONDS FLAKED,,ALMONDS FLAKED,21.96,310,GST Free Expenses,,,,,,,Active,Untracked
+FOUN,Worcestershire Sauce,,Worcestershire Sauce,11.00,310,GST Free Expenses,,,,,,,Active,Untracked
+FREIGHT,FREIGHT,,FREIGHT,0.00,425,GST on Expenses,,,,,,,Active,Untracked
+FRIDGE REPAIR,FRIDGE REPAIR,,FRIDGE REPAIR,0.00,473,GST on Expenses,,,,,,,Active,Untracked
+Fruit Loaf,Fruit Loaf,,Fruit Loaf,6.95,310,GST Free Expenses,,,,,,,Active,Untracked
+FSSANX,SMOKED SALMON,,SMOKED SALMON,30.60,310,GST Free Expenses,,,,,,,Active,Untracked
+FSSTNO,Smoked Salmon,,Smoked Salmon,19.00,310,GST Free Expenses,,,,,,,Active,Untracked
+GAP,Garlic Peeled,,Garlic Peeled,7.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Gas Charges,Gas Charges,,Gas Charges,209.61,123,GST on Expenses,,,,,,,Active,Untracked
+GC0250,OJ GROVE,,OJ GROVE,17.10,310,GST Free Expenses,,,,,,,Active,Untracked
+GFAN,Peking Duck Spring Rolls,,Peking Duck Spring Rolls,13.00,310,GST Free Expenses,,,,,,,Active,Untracked
+GI,Ginger,,Ginger,24.00,310,GST Free Expenses,,,,,,,Active,Untracked
+GOODS,GOODS,,GOODS,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+GR,Grapes,,Grapes,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Green Sencha,Green Tea,,Green Tea,20.00,310,GST Free Expenses,,,,,,,Active,Untracked
+GRILL CLEANER,GRILL CLEANER,,GRILL CLEANER,20.91,460,GST on Expenses,,,,,,,Active,Untracked
+Grinder Clean,Grinder Clean,,Grinder Clean,44.00,408,GST on Expenses,,,,,,,Active,Untracked
+Grocery Supplies,Woolworths,,Woolworths,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+GSUP,COCONUT CREAM,,COCONUT CREAM,1.77,310,GST Free Expenses,,,,,,,Active,Untracked
+HAM43624,Champagne Ham,,Champagne Ham,8.70,310,GST Free Expenses,,,,,,,Active,Untracked
+Hand Sanitizer,Hand Sanitizer,,Hand Sanitizer,54.55,PACK,GST on Expenses,,,,,,,Active,Untracked
+HAST,Greek Feta,,Greek Feta,23.50,310,GST Free Expenses,,,,,,,Active,Untracked
+HAZELNUT LOG,HAZELNUT LOG,,H,34.95,310,GST on Expenses,,,,,,,Active,Untracked
+HENKT,Passionfruit Slice,,Passionfruit Slice,18.50,310,GST on Expenses,,,,,,,Active,Untracked
+Honey,Honey,,Honey 3Kg,23.56,310,GST Free Expenses,,,,,,,Active,Untracked
+HOTCH,Chocolate Powder,,Chocolate Rich Drinking Botero 21% 1Kg,10.50,310,GST on Expenses,,,,,,,Active,Untracked
+Ice,Ice,,Ice,4.50,310,GST on Expenses,,,,,,,Active,Untracked
+Icing Sugar,Icing Sugar,,Icing Sugar,3.10,310,GST Free Expenses,,,,,,,Active,Untracked
+INGH,Chicken Nuggets,,Chicken Nuggets,16.10,310,GST Free Expenses,,,,,,,Active,Untracked
+Jaffa Cakes,Jaffa Cakes,,Jaffa Cakes,18.95,310,GST on Expenses,,,,,,,Active,Untracked
+JAM,JAM,,JAM,13.45,310,GST Free Expenses,,,,,,,Active,Untracked
+James Boags Light,James Boags Light,,James Boags Light,18.59,310,GST on Expenses,,,,,,,Active,Untracked
+JIM,Sate Sauce,,Sate Sauce,7.13,310,GST Free Expenses,,,,,,,Active,Untracked
+JUICE,NOAHS JUICE,,NOAHS JUICE,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+JUST,Prawn Cutlet Raw 21/25,,Prawn Cutlet Raw 21/25,28.31,310,GST Free Expenses,,,,,,,Active,Untracked
+Kahlua,Kahlua,,Kahlua,27.90,310,GST on Expenses,,,,,,,Active,Untracked
+Key Lime Tart,Key Lime Tart,,Key Lime Tart,18.24,310,GST on Expenses,,,,,,,Active,Untracked
+KNORR,Hollandaise Sauce,,Hollandaise Sauce,10.00,310,GST Free Expenses,,,,,,,Active,Untracked
+KP25,KP25 5L,,KP25 5L,23.64,460,GST on Expenses,,,,,,,Active,Untracked
+KRBACRL,BACON,,BACON,49.25,310,GST Free Expenses,,,,,,,Active,Untracked
+KRIO,Peri Peri Seasoning,,Peri Peri Seasoning,16.10,310,GST Free Expenses,,,,,,,Active,Untracked
+Labour,Labour,,Labour,117.27,473,GST on Expenses,,,,,,,Active,Untracked
+LE,Lemons,,Lemons,4.00,310,GST Free Expenses,,,,,,,Active,Untracked
+LE2,Lemon Composite,,Lemon Composite,5.50,310,GST Free Expenses,,,,,,,Active,Untracked
+LEE,Leeks Bunch,,Leeks BNunch,6.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Legal Fees,Legal Fees,,Legal Fees,0.00,441,GST on Expenses,,,,,,,Active,Untracked
+LEGO,Crushed Tomatoes,,Crushed Tomatoes,5.80,310,GST Free Expenses,,,,,,,Active,Untracked
+LEMNO,Haloumi,,Haloumi,31.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Lemongrass,Lemongrass ginger Tea,,Lemongrass ginger Tea,36.00,310,GST Free Expenses,,,,,,,Active,Untracked
+LETBC,Baby Cos,,Baby Cos,2.75,310,GST Free Expenses,,,,,,,Active,Untracked
+LETC,CosLettuce,,CosLettuce,3.50,310,GST Free Expenses,,,,,,,Active,Untracked
+LFLBRB,Lamb Leg,,Lamb Leg,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+LFLDI2,DICED LAMB,,DICED LAMB,18.00,310,GST Free Expenses,,,,,,,Active,Untracked
+LI2,Limes,,Limes,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+LIDS,LIDS SLEEVE,,LIDS SLEEVE,0.20,PACK,GST on Expenses,,,,,,,Active,Untracked
+LIDS 4OZ,LIDS 40Z,,LIDS 40Z,3.00,PACK,GST on Expenses,,,,,,,Active,Untracked
+LIDSBOX,Coffee Cup Lids Box,,"Lid eco 8,12,16 oz (1200/Box) * new white*",66.00,PACK,GST on Expenses,,,,,,,Active,Untracked
+Little Italy,Little Italy Beans,,Little Italy Beans,30.50,310,GST on Expenses,,,,,,,Active,Untracked
+Little Italy Beans,Little Italy Beans,,Little Italy Beans,30.50,310,GST Free Expenses,,,,,,,Active,Untracked
+LS10118,Professional Trim 2Lt Btl,,Professional Trim 2Lt Btl,3.43,310,GST Free Expenses,,,,,,,Active,Untracked
+M/FOO,Seeded Mustard,,Seeded Mustard,17.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MAINL,Cheese,,Cheese,16.15,310,GST on Expenses,,,,,,,Active,Untracked
+Mango Diced,Mango Diced,,Mango Diced,7.80,310,GST Free Expenses,,,,,,,Active,Untracked
+Maple,Maple Syrup,,Maple Syrup,13.50,310,GST Free Expenses,,,,,,,Active,Untracked
+MARK,SCALLOPS,,SCALLOPS,26.75,310,GST Free Expenses,,,,,,,Active,Untracked
+Marl Sands,Marlborough Sands Sav Blanc,,Marlborough Sands Sav Blanc,12.90,310,GST on Expenses,,,,,,,Active,Untracked
+MAT,Mat,,Mat,11.00,408,GST on Expenses,,,,,,,Active,Untracked
+MATCHA,MATCHA,,MATCHA,27.15,310,GST Free Expenses,,,,,,,Active,Untracked
+MCCA,Hash Browns,,Hash Browns,7.75,310,GST Free Expenses,,,,,,,Active,Untracked
+Me&U,Me & U Interface,,Me & U Interface,23.10,,GST on Expenses,,,,,,,Active,Untracked
+MEAT,MEAT,,MEAT,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+ME-D10A,2 Door Fridge,,2 Door Fridge,"1,400.00",131,GST on Expenses,,,,,,,Active,Untracked
+Merlot,Climbing Merlot,,Climbing Merlot,17.10,310,GST on Expenses,,,,,,,Active,Untracked
+Milk Buns,Milk Buns,,Milk Buns,29.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Milk Lab Soy,Milk Lab Soy,,Milk Lab Soy,24.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MILK SUPPLIES,MILK,,MILK,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MilkLab Lactose Free,MilkLab L/Free,,MilkLab L/Free,27.70,310,GST Free Expenses,,,,,,,Active,Untracked
+MIMLSOY,Milk Lab Soy,,Milk Lab Soy,25.75,310,GST Free Expenses,,,,,,,Active,Untracked
+MINT,Mint,,Mint,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Misc,Misc,,Misc,30.84,310,GST Free Expenses,,,,,,,Active,Untracked
+MISCELLANEOUS,Misc,,Misc,3.52,310,GST Free Expenses,,,,,,,Active,Untracked
+MISSN,Tortilla Wraps,,Tortilla Wraps,4.85,310,GST Free Expenses,,,,,,,Active,Untracked
+MixedHerbs,Mixed Herbs,,Mixed Herbs,15.37,460,GST Free Expenses,,,,,,,Active,Untracked
+MLKLB,Milk Lab Almond Milk Carton,,Milk Lab Almond Milk,30.95,310,GST Free Expenses,,,,,,,Active,Untracked
+MR,Rockmelon,,Rockmelon,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MRC,Chips Mr Creamy Deluxe,,Chips MR CREAMY DELUXE,33.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MU,Mushrooms,,Mushrooms Market Button - Kg,12.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MUC,Mushrooms Case,,Mushrooms Case,46.00,310,GST Free Expenses,,,,,,,Active,Untracked
+MUF,Field Mushroom,,Field Mushroom,14.00,310,GST Free Expenses,,,,,,,Active,Untracked
+muf60br,Muffin Papers,,Muffin Papers,50.69,PACK,GST on Expenses,,,,,,,Active,Untracked
+MUFC,Field Mushrooms Case,,Field Mushrooms Case,48.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Mussells,Mussells,,Mussells,13.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Napkins,Napkin Quilted,,Napkin Quilted,34.55,PACK,GST on Expenses,,,,,,,Active,Untracked
+Natvia,Natvia Sweetner,,Natvia Sweetner,28.50,310,GST Free Expenses,,,,,,,Active,Untracked
+NHANC,Noahs Apple/Nec/Coco,,Noahs Applke/Nec/Coco,30.76,310,GST Free Expenses,,,,,,,Active,Untracked
+NHAPM260,Noahs Apple/Peach/Mango,,Noahs Apple/Peach/Mango,30.76,310,GST Free Expenses,,,,,,,Active,Untracked
+NHCA260,Noahs Clear Apple,,Noahs Clear Apple,30.76,310,GST Free Expenses,,,,,,,Active,Untracked
+NHV0260,Noahs Orange Juice,,Noahs Orange Juice,30.76,310,GST Free Expenses,,,,,,,Active,Untracked
+OBENT,Rice wine vinegar,,Rice wine vinegar,2.76,310,GST Free Expenses,,,,,,,Active,Untracked
+OCSPR,Cranberry Sauce,,Cranberry Sauce,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Olive Grove,Oliver Grove Chard,,Oliver Grove Chard,13.00,310,GST on Expenses,,,,,,,Active,Untracked
+ONB,Onions Brown,,Onions Brown XL - Kg,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+ONR,Onions Red Medium,,Onions Red Medium - Kg,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Orange Almond Cak,Orange Almond Cake,,Orange Almond Cake,24.99,310,GST on Expenses,,,,,,,Active,Untracked
+ORJ,Oranges,,Oranges,1.80,310,GST Free Expenses,,,,,,,Active,Untracked
+OVEN REPAIR,OVEN REPAIR,,OVEN REPAIR,137.50,473,GST on Expenses,,,,,,,Active,Untracked
+P10118,Professional Full 2Lt Btl,,Professional Full 2Lt Btl,3.32,310,GST Free Expenses,,,,,,,Active,Untracked
+PACKAGING,PACKAGING,,PACKAGING,0.00,PACK,GST on Expenses,,,,,,,Active,Untracked
+PAI,Parsley Italian,,Parsley Italian,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+PAMPS,Puff Pastry,,Puff Pastry,8.00,310,GST Free Expenses,,,,,,,Active,Untracked
+PAPRIKA,PAPRIKA,,PAPRIKA,16.30,460,GST Free Expenses,,,,,,,Active,Untracked
+Passionfruit Cheesecake,Passionfruit Cheesecake,,Passionfruit Cheesecake,46.58,310,GST on Expenses,,,,,,,Active,Untracked
+pdc360b,Cup Plastic Bio 360ml,,Cup Plastic Bio 360ml,9.30,310,GST on Expenses,,,,,,,Active,Untracked
+pdcldb,Lid Dome Bio Sleeve,,Lid Dome Bio Sleeve,4.68,310,GST on Expenses,,,,,,,Active,Untracked
+Peanut Butter,Peanut Butter Smooth,,Peanut Butter Smooth,22.25,310,GST Free Expenses,,,,,,,Active,Untracked
+PEAR RASP BREAD,PEAR RASP BREAD,,PEAR RASP BREAD,18.95,310,GST Free Expenses,,,,,,,Active,Untracked
+PEP,Pears,,Pears,3.75,310,GST Free Expenses,,,,,,,Active,Untracked
+Pepper Cracked,Pepper Cracked Course,,Pepper Cracked Course,20.20,310,GST Free Expenses,,,,,,,Active,Untracked
+PEPPERCORNS,PEPPERCORNS,,PEPPERCORNS,16.05,460,GST Free Expenses,,,,,,,Active,Untracked
+Peppermint Tea,Peppermint Tea,,Peppermint Tea,18.50,310,GST Free Expenses,,,,,,,Active,Untracked
+PERIT,Shaved Parmesan,,Shaved Parmesan,34.39,310,GST Free Expenses,,,,,,,Active,Untracked
+Pest Control,Pest Control,,Pest Control,150.00,408,GST on Expenses,,,,,,,Active,Untracked
+PF,Passionfruuit,,Passionfruuit,1.50,310,GST Free Expenses,,,,,,,Active,Untracked
+PG,RED EMPEROR,,RED EMPEROR,47.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Pistachios,Pistachio Raw,,Pistachio Raw,48.50,310,GST Free Expenses,,,,,,,Active,Untracked
+pl2,lids,,lids,8.58,PACK,GST on Expenses,,,,,,,Active,Untracked
+PMMV31OC,Prawns,,P,16.50,310,GST Free Expenses,,,,,,,Active,Untracked
+PODS,PODS,,PODS,7.00,310,GST Free Expenses,,,,,,,Active,Untracked
+POLENTA,POLENTA,,POLENTA,4.93,310,GST Free Expenses,,,,,,,Active,Untracked
+PONT,Balsamic Vinegar,,Balsamic Vinegar,30.40,310,GST Free Expenses,,,,,,,Active,Untracked
+POS Repair,POS Repair,,POS Repair,608.18,720,GST on Expenses,,,,,,,Active,Untracked
+POTB,Potato Brushed,,Potato Brushed,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+potc,Cocktail Potato,,Coctail Potato,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+POTK,Kipfler Potato,,Kipfler Potato,5.50,310,GST Free Expenses,,,,,,,Active,Untracked
+POTL,Potato Large,,Potato Large,2.50,310,GST Free Expenses,,,,,,,Active,Untracked
+POTS,Sweet Potato,,Sweet Potatao2,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Prawns,Cooked Prawns,,Cooked Prawns,29.50,310,GST Free Expenses,,,,,,,Active,Untracked
+PRIME,Garbage Bags 80l x 25,,Garbage Bags 80l x 25,3.97,408,GST on Expenses,,,,,,,Active,Untracked
+PRINTER,PRINTER,,PRINTER,437.73,461,GST on Expenses,,,,,,,Active,Untracked
+PUMBN,Butternut Pumpkin,,Butternut Pumpkin,2.00,310,GST Free Expenses,,,,,,,Active,Untracked
+PWWLD,Pearl Perch,,Pearl Perch,92.00,310,GST Free Expenses,,,,,,,Active,Untracked
+PYBENSG,PORK BELLY,,PORK BELLY,16.00,310,GST Free Expenses,,,,,,,Active,Untracked
+QBA,Turkish Loaf x4,,Turkish Loaf x4,29.55,310,GST Free Expenses,,,,,,,Active,Untracked
+QW,Cream Bulbs,,Cream Bulbs,7.90,460,GST Free Expenses,,,,,,,Active,Untracked
+Raspberries Frozen,Raspberries Frozen,,Raspberries Frozen,10.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Raw Sugar Sticks Botero,Botero Sugar Sticks,,Botero Sugar Sticks,28.50,310,GST on Expenses,,,,,,,Active,Untracked
+REAL,Cream Cheese,,Cream Cheese,15.78,310,GST Free Expenses,,,,,,,Active,Untracked
+REDCH,Sweet Lips,,Sweet Lips,49.50,310,GST Free Expenses,,,,,,,Active,Untracked
+Register Roll,Roll Register 76x76 Bond,,Roll Register 76x76 Bond,19.50,461,GST on Expenses,,,,,,,Active,Untracked
+RENT,Rent,,Rent,"9,166.66",469,GST on Expenses,,,,,,,Active,Untracked
+Ribbon RCE38BR,Printer ribbon,,Printer ribbon,15.95,461,GST on Expenses,,,,,,,Active,Untracked
+Ricotta Nutella tart,Ricotta Nutella Tart,,Ricotta Nutella Tart,21.95,310,GST on Expenses,,,,,,,Active,Untracked
+RIV,Gherkins,,Gherkins,13.05,310,GST Free Expenses,,,,,,,Active,Untracked
+ROC,Rocket,,Rocket,18.00,310,GST Free Expenses,,,,,,,Active,Untracked
+ROSE,Rosemary,,Rosemary,3.00,310,GST Free Expenses,,,,,,,Active,Untracked
+S Vitt Mineral Water,San Vitt Mineral Water,,San Vitt Mineral Water,31.95,310,GST on Expenses,,,,,,,Active,Untracked
+SANDH,Capsicum Strips,,Capsicum Strips,13.89,310,GST Free Expenses,,,,,,,Active,Untracked
+SAUBBQ,BBQ Sauce,,BBQ Sauce,8.65,310,GST Free Expenses,,,,,,,Active,Untracked
+SAUTOM,Tomato Sauce,,Tomato Sauce,8.50,310,GST Free Expenses,,,,,,,Active,Untracked
+SAXA,Table Salt,,Table Salt,1.30,310,GST Free Expenses,,,,,,,Active,Untracked
+SBFWHF3,Whiting Fillets 3kg,,Whiting Fillets 3kg,17.20,310,GST Free Expenses,,,,,,,Active,Untracked
+SBLB,Snackbox Large,,Snackbox Large,18.32,PACK,GST on Expenses,,,,,,,Active,Untracked
+sbrb,Snack Box Regular Sleeve,,Snack Box Regular Sleeve,0.28,310,GST on Expenses,,,,,,,Active,Untracked
+SCN31JK,SCALLOPS,,SCALLOPS,27.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Service,Coffee Machine Service,,Coffee Machine Service,297.70,473,GST on Expenses,,,,,,,Active,Untracked
+Sesame Seeds,Sesame Seeds,,Sesame Seeds,8.00,310,GST Free Expenses,,,,,,,Active,Untracked
+SHAL,Shallots Bunch,,Shallots Bunch - Each,1.80,310,GST Free Expenses,,,,,,,Active,Untracked
+SHUCK OYSTERS,Catering,,,,,,Catering,0.00,,,,,Active,Untracked
+sk15,Skewers,,Skewers,5.06,PACK,GST on Expenses,,,,,,,Active,Untracked
+Smoked Salmon,Smoked Salmon,,Smoked Salmon,29.95,310,GST Free Expenses,,,,,,,Active,Untracked
+Smooth Operater,Cab Merlot,,Cab Merlot,14.60,310,GST on Expenses,,,,,,,Active,Untracked
+SMSGCHO,Chorizo,,Chorizo,14.80,310,GST Free Expenses,,,,,,,Active,Untracked
+Sourdough,Sourdough Sliced,,Sourdough Sliced,19.50,310,GST Free Expenses,,,,,,,Active,Untracked
+SP,Snow Peas,,Snow Peas,20.00,310,GST Free Expenses,,,,,,,Active,Untracked
+SPEED,Turkish Loaf,,Turkish Loaf,42.20,310,GST Free Expenses,,,,,,,Active,Untracked
+SPI,Baby Spinach,,Baby Spinach - Kg,18.00,310,GST Free Expenses,,,,,,,Active,Untracked
+SPIC,Spinach Case,,Spinach Case,22.00,310,GST Free Expenses,,,,,,,Active,Untracked
+SQFPCG2K,Squid Fillet,,Squid Fillet Gigas -P/CUT O/KING,11.10,310,GST on Expenses,,,,,,,Active,Untracked
+SQUID,Fish Sauce,,Fish Sauce,3.30,310,GST Free Expenses,,,,,,,Active,Untracked
+ST,Strawberries,,Strawberries,3.75,310,GST Free Expenses,,,,,,,Active,Untracked
+Stationery,Stationery Supplies,,Stationery Supplies,47.70,461,GST on Expenses,,,,,,,Active,Untracked
+Sticky Date Pud,Sticky Date Pud,,Sticky Date Pudd,19.00,310,GST on Expenses,,,,,,,Active,Untracked
+stjeco,Jumbo Straws Clear,,Jumbo Straws Clear,20.35,PACK,GST on Expenses,,,,,,,Active,Untracked
+stjpap,Straws Jumbo Bamboo,,Straws Jumbo Bamboo,11.00,310,GST on Expenses,,,,,,,Active,Untracked
+Stone & Wood,Stone & Wood,,Stone & Wood,24.49,310,GST on Expenses,,,,,,,Active,Untracked
+Strawberries Frozen,Strawberries Frozen,,Strawberries Frozen,8.35,310,GST Free Expenses,,,,,,,Active,Untracked
+Strawberry Cheesecake Tray,Strawberry Cheesecake Tray,,Strawberry Cheesecake Tray,17.01,310,GST on Expenses,,,,,,,Active,Untracked
+Strawberry Topping,Strawberry Topping,,Strawberry Topping,8.30,310,GST Free Expenses,,,,,,,Active,Untracked
+SUN,Choc Topping Sunshine,,Choc Topping Sunshine,8.12,170,GST on Expenses,,,,,,,Active,Untracked
+SUNNY,Blueberries,,Blueberries,9.20,310,GST Free Expenses,,,,,,,Active,Untracked
+Superannuation,Superannuation,,Superannuation,0.00,,,,,,,,,Active,Untracked
+Supplies,Supplies,,Supplies,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Supplies GST,Supplies GST,,Supplies GST,0.00,310,GST on Expenses,,,,,,,Active,Untracked
+Sweet Chilli,Sweet Chilli Sauce,,Sweet Chilli Sauce,12.90,310,GST Free Expenses,,,,,,,Active,Untracked
+T/A Cup 16oz Box,!6oz cups Box,,!6oz cups Box,158.00,PACK,GST on Expenses,,,,,,,Active,Untracked
+T/A Cups 12oz Sleeve,120z cups Sleeve,,120z cups Sleeve,5.40,PACK,GST on Expenses,,,,,,,Active,Untracked
+T-Bone,T-Bone,,T-Bone,16.90,310,GST Free Expenses,,,,,,,Active,Untracked
+TOBA,Toba Coffee,,Toba Botero 1kg *plunger*,29.00,310,GST on Expenses,,,,,,,Active,Untracked
+TOM2,Tomato Composite-KG,,Tomato Composite,3.50,310,GST Free Expenses,,,,,,,Active,Untracked
+TOM2C,Tomato Composite,,Tomato Composite,28.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Tomatoes,Tomatoes,,Tomatoes,35.00,310,GST Free Expenses,,,,,,,Active,Untracked
+TOMCH,Cherry Tomato,,Cherry Tomato,2.50,310,GST Free Expenses,,,,,,,Active,Untracked
+TOMREC,realish tomatoes case,,realish tomatoes case,12.00,310,GST Free Expenses,,,,,,,Active,Untracked
+TOMS,Tomato Small/Medium,,Tomato Small/Medium - Kg,4.50,310,GST on Expenses,,,,,,,Active,Untracked
+Topping Vanilla,Vanilla Topping,,Vanilla Topping,8.30,310,GST Free Expenses,,,,,,,Active,Untracked
+Torresella Pinot Grigio,Torresell Pinot Grigio,,Torresell Pinot Grigio,12.40,310,GST on Expenses,,,,,,,Active,Untracked
+TP,Beef Striploin,,Beef Striploin,17.90,310,GST Free Expenses,,,,,,,Active,Untracked
+TR61910,FRYPAN,,FRYPAN,39.60,131,GST on Expenses,,,,,,,Active,Untracked
+TRADE WSATE,TRADE WASTE,,TRADE WASTE,86.31,460,GST on Expenses,,,,,,,Active,Untracked
+Tray 4 Cup,TRAY 4 CUP (Box/100 Slv/50),,TRAY 4 CUP (Box/100 Slv/50),13.50,PACK,GST on Expenses,,,,,,,Active,Untracked
+TRUMP,Almond Meal,,Almond Meal,18.10,310,GST Free Expenses,,,,,,,Active,Untracked
+TURK OVAL,TURKISH OVAL,,TURKISH OVAL,30.95,310,GST Free Expenses,,,,,,,Active,Untracked
+Turkish Roll,Turkish Burger Roll,,Turkish Burger Roll,27.00,310,GST Free Expenses,,,,,,,Active,Untracked
+TURKLOAF,TURKISH LOAF BAKERS X 20,,TURKISH LOAF BAKERS X 20,69.45,310,GST Free Expenses,,,,,,,Active,Untracked
+TY,Tyro EFT Integration License,,Tyro EFT Integration License,160.00,473,GST on Expenses,,,,,,,Active,Untracked
+V/SYRUP,Vanilla Syrup,,Syrup Botero Vanilla 750ml,14.90,310,GST on Expenses,,,,,,,Active,Untracked
+V13427,V/Soy Creamy Orig UHT 1.0 Litr,,V/Soy Creamy Orig UHT 1.0 Litr,2.75,310,GST Free Expenses,,,,,,,Active,Untracked
+V500,SOY-Alternative Barista,,SOY-Alternative Barista,32.25,310,GST Free Expenses,,,,,,,Active,Untracked
+V501,ALMOND MILK ADC,,ALMOND MILK ADC,35.50,310,GST Free Expenses,,,,,,,Active,Untracked
+V502,ADC Oat Milk,,ADC Oat Milk,35.44,310,GST Free Expenses,,,,,,,Active,Untracked
+Van Bean Tart,vanilla Bean tart,,vanilla Bean tart,19.85,310,GST on Expenses,,,,,,,Active,Untracked
+VANILLA SLICE,VANILLA SLICE,,VANILLA SLICE,16.50,310,GST on Expenses,,,,,,,Active,Untracked
+VEGE,Vegemite PC,,Vegemite PC,18.01,310,GST Free Expenses,,,,,,,Active,Untracked
+Vegetables,Vegetables,,Vegetables,0.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Vinegar,Vinegar,,Vinegar,15.50,310,GST Free Expenses,,,,,,,Active,Untracked
+VLABALM,Almond Milk,,Almond Milk,35.43,310,GST Free Expenses,,,,,,,Active,Untracked
+VLABOAT,Oat Milk,,Oat Milk,32.36,310,GST Free Expenses,,,,,,,Active,Untracked
+Walnuts,Walnut Halves,,Walnut Halves,20.06,310,GST Free Expenses,,,,,,,Active,Untracked
+Water 600mlx12,Water 600ml x 12,,Water 600ml x 12,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+WEB REGO,WEB REGISTARTION,,WEB REGISTARTION,60.00,453,GST on Expenses,,,,,,,Active,Untracked
+White Choc Buttons,White Choc Buttons,,White Choc Buttons,10.35,310,GST Free Expenses,,,,,,,Active,Untracked
+White Drinking Choc,White Drinking Choc,,White Drinking Choc,15.95,310,GST Free Expenses,,,,,,,Active,Untracked
+Wht,White Jumbo  Bread,,White Jumbo  Bread,5.00,310,GST Free Expenses,,,,,,,Active,Untracked
+Wild,Wild Drinking Choc,,Wild Drinking Choc,9.95,310,GST Free Expenses,,,,,,,Active,Untracked
+Window Cleaning,Window Cleaning,,Window Cleaning,33.00,408,GST on Expenses,,,,,,,Active,Untracked
+wiprb,Blue Chux Roll,,Blue Chux Roll,11.22,408,GST on Expenses,,,,,,,Active,Untracked
+WLBR,Turkish Loaf,,Turkish Loaf,21.10,310,GST Free Expenses,,,,,,,Active,Untracked
+WOM,Aioli,,Aioli,7.50,310,GST Free Expenses,,,,,,,Active,Untracked
+WOOD,Relish Tomato,,Relish Tomato,31.55,310,GST Free Expenses,,,,,,,Active,Untracked
+Workers Comp,Workers Comp,,Workers Comp,175.00,433,GST on Expenses,,,,,,,Active,Untracked
+yalumba Pinot Grigio,Pinot Grigio,,Pinot Grigio,11.35,310,GST on Expenses,,,,,,,Active,Untracked
+ZUC,Zucchini,,Zucchini,3.50,310,GST Free Expenses,,,,,,,Active,Untracked
+ZYMIL,ZYMIL,,ZYMIL,32.12,310,GST Free Expenses,,,,,,,Active,Untracked
