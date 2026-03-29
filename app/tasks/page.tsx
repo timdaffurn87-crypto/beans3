@@ -10,7 +10,7 @@ import { getCurrentCafeDay } from '@/lib/cafe-day'
 import { formatTime } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { logActivity } from '@/lib/activity'
-import type { DailyTask, Profile, TaskTemplate } from '@/lib/types'
+import type { DailyTask, Profile } from '@/lib/types'
 
 /** Maps station keys to human-readable display names */
 function stationDisplayName(station: string): string {
@@ -53,40 +53,16 @@ export default function TasksPage() {
   }
 
   /**
-   * Generate daily tasks from active templates for today's café day.
-   * Only inserts if no tasks exist yet — idempotent.
+   * Generate daily tasks for today's café day via server-side API route.
+   * The API uses the service role key to bypass the daily_tasks INSERT RLS restriction.
+   * Idempotent — does nothing if tasks already exist for that day.
    */
   async function generateDailyTasks(cafeDay: string) {
-    const supabase = createClient()
-
-    // Check if tasks already exist for today
-    const { count } = await supabase
-      .from('daily_tasks')
-      .select('id', { count: 'exact', head: true })
-      .eq('cafe_day', cafeDay)
-
-    if ((count ?? 0) > 0) return // Already generated — do nothing
-
-    // Fetch all active task templates
-    const { data: templates } = await supabase
-      .from('task_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('station')
-      .order('sort_order')
-
-    if (!templates || templates.length === 0) return
-
-    // Insert a daily_task row for each template
-    const rows = (templates as TaskTemplate[]).map(t => ({
-      template_id: t.id,
-      cafe_day: cafeDay,
-      title: t.title,
-      description: t.description,
-      station: t.station,
-    }))
-
-    await supabase.from('daily_tasks').insert(rows)
+    await fetch('/api/tasks/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cafeDay }),
+    })
   }
 
   /** Fetch today's tasks */
