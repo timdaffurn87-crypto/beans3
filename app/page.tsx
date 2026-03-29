@@ -826,6 +826,7 @@ export default function DashboardPage() {
     incompleteTasks: [],
     recentTasks: [],
     staffProfiles: [],
+    tasksByStaff: [],
   })
   const [xeroConnected, setXeroConnected] = useState(false)
 
