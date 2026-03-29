@@ -168,7 +168,7 @@ export default function ResultsPage() {
   if (loading || loadingData || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
-        <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#296861', borderTopColor: 'transparent' }} />
       </div>
     )
   }
@@ -179,101 +179,102 @@ export default function ResultsPage() {
 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
+
       {/* Header */}
-      <div className="px-5 pt-12 pb-6">
-        <button onClick={() => router.back()} className="text-[#B8960C] text-sm mb-3 flex items-center gap-1">
-          ← Back
-        </button>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">7-Day Performance</h1>
-        <p className="text-sm text-gray-400 mt-1">Rolling 7-day results</p>
+      <div className="px-5 pt-12 pb-4">
+        <p className="section-label mb-2" style={{ color: '#296861' }}>Metrics & Insights</p>
+        <h1 className="text-4xl font-bold leading-tight" style={{ color: '#2D2D2D' }}>
+          7-Day
+          <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
+            Performance
+          </span>
+          Report
+        </h1>
+        <div className="flex items-center gap-2 mt-3">
+          <span className="material-symbols-outlined text-gray-400" style={{ fontSize: '16px' }}>calendar_today</span>
+          <p className="text-sm text-gray-400">Week ending {formatDisplayDate(last7Days[0])}</p>
+        </div>
       </div>
 
-      <div className="px-5 space-y-4">
+      <div className="px-5 space-y-6">
 
-        {/* ── Targets section ── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="section-label">Performance Targets</p>
-            {isOwner && !editingTargets && (
-              <button
-                onClick={() => setEditingTargets(true)}
-                className="text-sm font-semibold text-[#B8960C]"
-              >
-                Edit Targets
-              </button>
-            )}
-            {isOwner && editingTargets && (
-              <button
-                onClick={() => setEditingTargets(false)}
-                className="text-sm text-gray-400"
-              >
-                Cancel
-              </button>
-            )}
+        {/* ── KPI Target cards ── */}
+        <div className="space-y-3">
+
+          {/* Waste Goal */}
+          <div className="bg-white rounded-2xl p-4 card-interactive">
+            <div className="flex items-start justify-between mb-2">
+              <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>delete_outline</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: '#FFF8E7', color: '#C47F17' }}>Priority</span>
+            </div>
+            <p className="font-semibold text-sm text-gray-600">Waste Goal</p>
+            <p className="text-xs text-gray-400">Maintain lean operations</p>
+            <p className="text-3xl font-bold mt-2" style={{ color: '#2D2D2D' }}>
+              &lt; {formatCurrency(targets.waste)}
+            </p>
+            <p className="section-label mt-1">Target per week</p>
           </div>
 
-          {!editingTargets ? (
-            // Read-only targets display
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
-              <div className="flex items-center gap-4 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400">Waste</span>
-                  <span className="text-sm font-semibold text-[#1A1A1A]">&lt; {formatCurrency(targets.waste)}</span>
-                </div>
-                <span className="text-gray-200">|</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400">Tasks</span>
-                  <span className="text-sm font-semibold text-[#1A1A1A]">≥ {targets.tasks}%</span>
-                </div>
-                <span className="text-gray-200">|</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-gray-400">Calibration</span>
-                  <span className="text-sm font-semibold text-[#1A1A1A]">{targets.calibration}%</span>
-                </div>
-              </div>
+          {/* Task Completion */}
+          <div className="bg-white rounded-2xl p-4 card-interactive">
+            <div className="flex items-start justify-between mb-2">
+              <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>checklist</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Standard</span>
             </div>
-          ) : (
-            // Inline edit form (owner only)
+            <p className="font-semibold text-sm text-gray-600">Task Completion</p>
+            <p className="text-xs text-gray-400">Daily operational checklists</p>
+            <p className="text-3xl font-bold mt-2" style={{ color: '#2D2D2D' }}>≥ {targets.tasks}%</p>
+            <p className="section-label mt-1">Team minimum requirement</p>
+          </div>
+
+          {/* Calibration — dark teal card */}
+          <div className="rounded-2xl p-4 card-interactive" style={{ background: 'linear-gradient(135deg, #296861 0%, #1a4a45 100%)' }}>
+            <div className="flex items-start justify-between mb-2">
+              <span className="material-symbols-outlined text-white/70" style={{ fontSize: '22px' }}>tune</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white' }}>Critical</span>
+            </div>
+            <p className="font-semibold text-sm text-white">Calibration</p>
+            <p className="text-xs text-white/60">Equipment precision check</p>
+            <p className="text-3xl font-bold mt-2 text-white">{targets.calibration}%</p>
+            <p className="section-label mt-1 text-white/50">Zero tolerance deviation</p>
+          </div>
+
+          {/* Inline target edit form (owner only, when editing) */}
+          {isOwner && editingTargets && (
             <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>Edit Targets</p>
+                <button onClick={() => setEditingTargets(false)} className="text-sm text-gray-400">Cancel</button>
+              </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Daily Waste Limit ($)</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Daily Waste Limit ($)</label>
                 <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  value={editWaste}
+                  type="number" step="1" min="0" value={editWaste}
                   onChange={e => setEditWaste(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Task Completion Target (%)</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Task Completion Target (%)</label>
                 <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  max="100"
-                  value={editTasks}
+                  type="number" step="1" min="0" max="100" value={editTasks}
                   onChange={e => setEditTasks(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
                 />
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Calibration Compliance Target (%)</label>
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Calibration Target (%)</label>
                 <input
-                  type="number"
-                  step="1"
-                  min="0"
-                  max="100"
-                  value={editCal}
+                  type="number" step="1" min="0" max="100" value={editCal}
                   onChange={e => setEditCal(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
                 />
               </div>
               <button
                 onClick={handleSaveTargets}
                 disabled={savingTargets}
-                className="w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40"
+                className="w-full py-3 rounded-full text-white font-semibold disabled:opacity-40"
+                style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
               >
                 {savingTargets ? 'Saving…' : 'Save Targets'}
               </button>
@@ -281,91 +282,134 @@ export default function ResultsPage() {
           )}
         </div>
 
-        {/* ── Day-by-day cards ── */}
+        {/* ── Daily Breakdown ── */}
         <div>
-          <p className="section-label mb-3">Daily Breakdown</p>
-          <div className="space-y-3">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-2xl font-bold" style={{ color: '#2D2D2D' }}>
+              Daily{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Breakdown</span>
+            </h2>
+            <p className="text-xs text-gray-400">Performance over last 7 cycles</p>
+          </div>
+
+          <div className="space-y-2">
             {last7Days.map((day, index) => {
               const report = reports[day]
               const isToday = day === today
-
-              // Day label: "Today — Thursday, Mar 26" or just the date
               const dateLabel = formatDisplayDate(day)
               const dayHeading = isToday ? `Today — ${dateLabel}` : dateLabel
+
+              // Day-of-week label for featured card
+              const dayOfWeek = new Date(day + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'long' }).toUpperCase()
+
+              const taskPct = report && report.tasks_total > 0
+                ? Math.round((report.tasks_completed / report.tasks_total) * 100)
+                : 0
 
               return (
                 <div key={day}>
                   {report ? (
-                    // Tappable card with full data
-                    <button
-                      onClick={() => router.push(`/results/${day}`)}
-                      className="w-full bg-white rounded-2xl p-4 shadow-sm text-left active:scale-[0.99] transition-transform"
-                    >
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="font-semibold text-[#1A1A1A] text-sm">{dayHeading}</p>
-                        <span className="text-gray-300 text-base">›</span>
-                      </div>
+                    index === 0 ? (
+                      // ── Featured card for most recent day with report ──
+                      <button
+                        onClick={() => router.push(`/results/${day}`)}
+                        className="w-full bg-white rounded-2xl p-4 card-interactive text-left"
+                        style={{ borderLeft: '3px solid #296861' }}
+                      >
+                        <p className="section-label mb-0.5" style={{ color: '#296861' }}>{dayOfWeek}</p>
+                        <div className="flex items-center justify-between mb-3">
+                          <p className="font-bold text-base" style={{ color: '#2D2D2D' }}>{dateLabel}</p>
+                          <span className="text-gray-300 text-base">›</span>
+                        </div>
 
-                      {/* 2×2 metrics grid */}
-                      <div className="grid grid-cols-2 gap-2">
-                        {/* Tasks */}
-                        <div className="bg-[#FAF8F3] rounded-xl p-3">
-                          <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Tasks</p>
-                          {report.tasks_total > 0 ? (
-                            <p className={`text-lg font-bold ${taskColour(
-                              Math.round((report.tasks_completed / report.tasks_total) * 100),
-                              targets.tasks
-                            )}`}>
-                              {Math.round((report.tasks_completed / report.tasks_total) * 100)}%
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="bg-[#FAF8F3] rounded-xl p-3">
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Tasks</p>
+                            <p className={`text-lg font-bold ${taskColour(taskPct, targets.tasks)}`}>
+                              {report.tasks_total > 0 ? `${taskPct}%` : '—'}
                             </p>
-                          ) : (
-                            <p className="text-lg font-bold text-gray-400">—</p>
-                          )}
-                          <p className="text-xs text-gray-400">
-                            {report.tasks_completed}/{report.tasks_total} done
-                          </p>
+                            <p className="text-xs text-gray-400">{report.tasks_completed}/{report.tasks_total} done</p>
+                          </div>
+                          <div className="bg-[#FAF8F3] rounded-xl p-3">
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Waste</p>
+                            <p className={`text-lg font-bold ${wasteColour(report.waste_total_value, targets.waste)}`}>
+                              {formatCurrency(report.waste_total_value)}
+                            </p>
+                            <p className="text-xs text-gray-400">total value</p>
+                          </div>
+                          <div className="bg-[#FAF8F3] rounded-xl p-3">
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Calibration</p>
+                            <p className={`text-lg font-bold ${calColour(report.calibration_compliance_pct)}`}>
+                              {report.calibration_compliance_pct}%
+                            </p>
+                            <p className="text-xs text-gray-400">{report.calibration_count} logged</p>
+                          </div>
+                          <div className="bg-[#FAF8F3] rounded-xl p-3">
+                            <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Invoices</p>
+                            <p className="text-lg font-bold" style={{ color: '#2D2D2D' }}>{report.invoices_count}</p>
+                            <p className="text-xs text-gray-400">{report.invoices_count === 1 ? 'invoice' : 'invoices'}</p>
+                          </div>
                         </div>
-
-                        {/* Waste */}
-                        <div className="bg-[#FAF8F3] rounded-xl p-3">
-                          <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Waste</p>
-                          <p className={`text-lg font-bold ${wasteColour(report.waste_total_value, targets.waste)}`}>
-                            {formatCurrency(report.waste_total_value)}
-                          </p>
-                          <p className="text-xs text-gray-400">total value</p>
+                      </button>
+                    ) : (
+                      // ── Compact row for older days ──
+                      <button
+                        onClick={() => router.push(`/results/${day}`)}
+                        className="w-full bg-white rounded-2xl p-3 card-interactive text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>{dateLabel}</p>
+                          <div className="flex items-center gap-3 text-xs">
+                            <span className="text-gray-400">
+                              Tasks <strong className={taskColour(taskPct, targets.tasks)}>{report.tasks_total > 0 ? `${taskPct}%` : '—'}</strong>
+                            </span>
+                            <span className="text-gray-400">
+                              Waste <strong className={wasteColour(report.waste_total_value, targets.waste)}>{formatCurrency(report.waste_total_value)}</strong>
+                            </span>
+                            <span className="text-gray-400">
+                              Calib <strong className={calColour(report.calibration_compliance_pct)}>{report.calibration_compliance_pct}%</strong>
+                            </span>
+                            <span className="text-gray-300">›</span>
+                          </div>
                         </div>
-
-                        {/* Calibration */}
-                        <div className="bg-[#FAF8F3] rounded-xl p-3">
-                          <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Calibration</p>
-                          <p className={`text-lg font-bold ${calColour(report.calibration_compliance_pct)}`}>
-                            {report.calibration_compliance_pct}%
-                          </p>
-                          <p className="text-xs text-gray-400">{report.calibration_count} logged</p>
-                        </div>
-
-                        {/* Invoices */}
-                        <div className="bg-[#FAF8F3] rounded-xl p-3">
-                          <p className="text-xs text-gray-400 uppercase tracking-wider font-medium mb-1">Invoices</p>
-                          <p className="text-lg font-bold text-[#1A1A1A]">
-                            {report.invoices_count}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {report.invoices_count === 1 ? 'invoice' : 'invoices'}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
+                      </button>
+                    )
                   ) : (
                     // No report for this day
-                    <div className="bg-white rounded-2xl p-4 shadow-sm opacity-50">
-                      <p className="font-semibold text-[#1A1A1A] text-sm mb-1">{dayHeading}</p>
-                      <p className="text-sm text-gray-400">No report submitted</p>
+                    <div className="bg-white rounded-2xl p-3 opacity-40">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>{dayHeading}</p>
+                        <p className="text-xs text-gray-400">No report submitted</p>
+                      </div>
                     </div>
                   )}
                 </div>
               )
             })}
+          </div>
+        </div>
+
+        {/* ── Manager's Summary card ── */}
+        <div className="rounded-2xl overflow-hidden card-interactive" style={{ background: 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)' }}>
+          <div className="p-5">
+            <h2 className="text-2xl font-bold text-white leading-tight">
+              Manager&apos;s
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
+                Summary
+              </span>
+            </h2>
+            <p className="text-sm text-white/60 mt-2 leading-relaxed">
+              Review performance against targets. Tap any day above to drill into the full EOD report.
+            </p>
+            {isOwner && !editingTargets && (
+              <button
+                onClick={() => setEditingTargets(true)}
+                className="mt-4 px-5 py-2.5 rounded-full text-sm font-semibold text-white"
+                style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+              >
+                Edit Targets
+              </button>
+            )}
           </div>
         </div>
 

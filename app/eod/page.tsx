@@ -176,7 +176,6 @@ export default function EODPage() {
   const [tillFloat, setTillFloat] = useState<number | null>(null)
 
   // Till reconciliation — explicit accountability: did the till balance?
-  // null = not yet answered; true = balanced; false = discrepancy
   const [tillBalanced, setTillBalanced] = useState<boolean | null>(null)
   const [tillDiscrepancyAmount, setTillDiscrepancyAmount] = useState('')
   const [tillExplanation, setTillExplanation] = useState('')
@@ -230,7 +229,6 @@ export default function EODPage() {
 
   /** Begin submission — validate till reconciliation, then warn about incomplete tasks */
   function handleSubmitClick() {
-    // Till reconciliation is required before closing the day
     if (tillBalanced === null) {
       showToast('Please confirm whether the till balanced', 'error')
       return
@@ -302,7 +300,7 @@ export default function EODPage() {
         .update({ status: 'submitted' })
         .eq('cafe_day', cafeDay)
 
-      // 3. Save till reconciliation record — upsert so resubmit overwrites the previous entry
+      // 3. Save till reconciliation record
       await supabase.from('till_reconciliation').upsert({
         cafe_day: cafeDay,
         logged_by: profile.id,
@@ -310,15 +308,13 @@ export default function EODPage() {
         discrepancy_amount: tillBalanced === false ? parseFloat(tillDiscrepancyAmount) : null,
         explanation: tillBalanced === false ? tillExplanation.trim() : null,
       }, { onConflict: 'cafe_day' })
-      // Capture for success screen
       setSubmittedBalanced(tillBalanced)
 
       // 4. Log activity
       await logActivity(profile.id, 'eod_submitted', `EOD report submitted for ${cafeDay}`)
 
-      // 5. Generate Xero Bill Import CSV and send EOD email (CSV is the email attachment fallback)
+      // 5. Generate Xero Bill Import CSV and send EOD email
       const xeroCSV = generateXeroCSV(invoices, cafeDay)
-      // Fire-and-forget: email failure should not block the EOD success screen
       fetch('/api/eod-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -342,12 +338,8 @@ export default function EODPage() {
   }
 
   /**
-   * Resubmit — re-fetches all café day data so the summary reflects the latest
-   * state (any waste, tasks, invoices added since the first submit), then forces
-   * alreadySubmitted back to false so the form is editable.
-   *
-   * Note: fetchDayData() will set alreadySubmitted(true) because the record exists —
-   * we override that immediately after it returns.
+   * Resubmit — re-fetches all café day data, then forces alreadySubmitted false
+   * so the form is editable again.
    */
   async function handleResubmit() {
     setSubmitted(false)
@@ -358,8 +350,6 @@ export default function EODPage() {
     setNotes('')
     setLoadingData(true)
     await fetchDayData()
-    // fetchDayData sets alreadySubmitted(true) because the record exists —
-    // override it so the form renders instead of the "Day Closed" screen
     setAlreadySubmitted(false)
   }
 
@@ -384,24 +374,12 @@ export default function EODPage() {
   const invoiceIds = invoices.map(i => i.id)
 
   // ─── Till balance computed values ────────────────────────────────────────
-  // How this works:
-  // - The float is the opening cash (set in Settings). It stays in the till all day.
-  // - Cash sales accumulate in the till on top of the float during the shift.
-  // - At EOD, staff remove cash sales to the safe, leaving only the float.
-  // - Cash Counted = what's physically in the till at close (should equal float).
-  // - Cash Sales = Cash Counted − Float (what was taken today before banking).
-  //   NOTE: if the café banks mid-shift, Cash Counted may equal Float already.
-  //   We use Cash Counted directly for Total Takings alongside EFTPOS.
-  // - Variance = Cash Counted − Float → anything non-zero is a discrepancy.
   const cashNum = parseFloat(cashTotal) || 0
   const eftposNum = parseFloat(eftposTotal) || 0
   const cashSales = tillFloat !== null && cashTotal !== '' ? Math.max(0, cashNum - tillFloat) : cashNum
-  // Total Takings = cash sales (cash above float) + EFTPOS
   const tillTotal = (tillFloat !== null && cashTotal !== '' ? cashSales : cashNum) + eftposNum
   const tillEntered = cashTotal !== '' || eftposTotal !== ''
-  // Variance: how much cash counted differs from the expected float
   const cashVariance = tillFloat !== null && cashTotal !== '' ? cashNum - tillFloat : null
-  // True discrepancy: variance exists and is non-zero (beyond rounding)
   const tillIsDiscrepancy = cashVariance !== null && Math.abs(cashVariance) > 0.01
 
   // ─── Render ────────────────────────────────────────────────────────────────
@@ -409,7 +387,7 @@ export default function EODPage() {
   if (loading || loadingData) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
-        <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#296861', borderTopColor: 'transparent' }} />
       </div>
     )
   }
@@ -418,37 +396,21 @@ export default function EODPage() {
   if (alreadySubmitted) {
     return (
       <div className="min-h-screen pb-24 flex flex-col" style={{ backgroundColor: '#FAF8F3' }}>
-        <div className="px-5 pt-12 pb-6">
-          <button
-            onClick={() => router.back()}
-            className="text-[#B8960C] text-sm mb-3 flex items-center gap-1"
-          >
-            ← Back
-          </button>
-        </div>
         <div className="flex-1 flex items-center justify-center px-5">
           <div className="bg-white rounded-2xl p-8 shadow-sm text-center w-full max-w-sm">
-            <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="w-8 h-8 text-[#16A34A]"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2.5}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-              </svg>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#E6F4F1' }}>
+              <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '32px' }}>check_circle</span>
             </div>
-            <h2 className="text-xl font-bold text-[#1A1A1A] mb-2">Day Closed</h2>
+            <h2 className="text-xl font-bold mb-2" style={{ color: '#2D2D2D' }}>Day Closed</h2>
             <p className="text-sm text-gray-500">
               The EOD report for{' '}
-              <span className="font-medium text-[#1A1A1A]">{formatDisplayDate(cafeDay)}</span> has
+              <span className="font-medium" style={{ color: '#2D2D2D' }}>{formatDisplayDate(cafeDay)}</span> has
               already been submitted.
             </p>
             <button
               onClick={() => router.push('/')}
-              className="mt-6 w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold"
+              className="mt-6 w-full py-3 rounded-full font-semibold text-white"
+              style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
             >
               Back to Dashboard
             </button>
@@ -468,27 +430,17 @@ export default function EODPage() {
   if (submitted) {
     const hasDiscrepancy = submittedBalanced === false
     return (
-      <div
-        className="min-h-screen flex items-center justify-center pb-24"
-        style={{ backgroundColor: '#FAF8F3' }}
-      >
+      <div className="min-h-screen flex items-center justify-center pb-24" style={{ backgroundColor: '#FAF8F3' }}>
         <div className="px-5 w-full max-w-sm space-y-3">
-          {/* Main confirmation card */}
           <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-              hasDiscrepancy ? 'bg-red-100' : 'bg-green-100'
-            }`}>
-              {hasDiscrepancy ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-[#DC2626]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-[#16A34A]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                </svg>
-              )}
+              hasDiscrepancy ? 'bg-red-100' : ''
+            }`} style={!hasDiscrepancy ? { backgroundColor: '#E6F4F1' } : {}}>
+              <span className="material-symbols-outlined" style={{ color: hasDiscrepancy ? '#DC2626' : '#296861', fontSize: '32px' }}>
+                {hasDiscrepancy ? 'warning' : 'check_circle'}
+              </span>
             </div>
-            <h2 className="text-2xl font-bold text-[#1A1A1A] mb-2">Day Closed</h2>
+            <h2 className="text-2xl font-bold mb-2" style={{ color: '#2D2D2D' }}>Day Closed</h2>
             <p className="text-sm text-gray-500 leading-relaxed">
               {hasDiscrepancy
                 ? 'Report submitted. The till discrepancy has been logged and the owner has been notified.'
@@ -497,7 +449,7 @@ export default function EODPage() {
             {hasDiscrepancy && (
               <div className="mt-4 px-4 py-3 bg-red-50 rounded-xl text-left">
                 <p className="text-xs font-semibold text-[#DC2626] uppercase tracking-wide mb-1">Discrepancy logged</p>
-                <p className="text-sm text-[#1A1A1A] font-medium">
+                <p className="text-sm font-medium" style={{ color: '#2D2D2D' }}>
                   {parseFloat(tillDiscrepancyAmount) > 0 ? '+' : ''}{formatCurrency(parseFloat(tillDiscrepancyAmount))}
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">{tillExplanation}</p>
@@ -505,7 +457,8 @@ export default function EODPage() {
             )}
             <button
               onClick={handleSignOut}
-              className="mt-6 w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold"
+              className="mt-6 w-full py-3 rounded-full font-semibold text-white"
+              style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
             >
               Back to Login
             </button>
@@ -529,7 +482,7 @@ export default function EODPage() {
       {showIncompleteWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-5">
           <div className="bg-white rounded-2xl p-6 shadow-xl w-full max-w-sm">
-            <h3 className="text-base font-bold text-[#1A1A1A] mb-2">Incomplete Tasks</h3>
+            <h3 className="text-base font-bold mb-2" style={{ color: '#2D2D2D' }}>Incomplete Tasks</h3>
             <p className="text-sm text-gray-600 mb-4">
               You have{' '}
               <span className="font-semibold text-[#D97706]">
@@ -546,7 +499,8 @@ export default function EODPage() {
               </button>
               <button
                 onClick={submitEOD}
-                className="flex-1 py-3 rounded-full bg-[#B8960C] text-white font-semibold text-sm"
+                className="flex-1 py-3 rounded-full text-white font-semibold text-sm"
+                style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
               >
                 Submit Anyway
               </button>
@@ -556,57 +510,76 @@ export default function EODPage() {
       )}
 
       {/* Header */}
-      <div className="px-5 pt-12 pb-6">
-        <button
-          onClick={() => router.back()}
-          className="text-[#B8960C] text-sm mb-3 flex items-center gap-1"
-        >
-          ← Back
-        </button>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">End of Day</h1>
-        <p className="text-sm text-gray-400 mt-1">{formatDisplayDate(cafeDay)}</p>
+      <div className="px-5 pt-12 pb-4">
+        <p className="section-label mb-2" style={{ color: '#296861' }}>Daily Summary</p>
+        <h1 className="text-4xl font-bold leading-tight" style={{ color: '#2D2D2D' }}>
+          Closing the
+          <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
+            Artisan Chapter
+          </span>
+        </h1>
+        <p className="text-sm text-gray-400 mt-2">
+          Review the performance metrics before finalising the transition.
+        </p>
       </div>
 
       <div className="px-5 space-y-4">
 
-        {/* ── Tasks summary ── */}
+        {/* ── 2×2 metric summary grid ── */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white rounded-2xl p-4 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>checklist</span>
+            <p className="section-label mt-1">Tasks</p>
+            <p className="font-bold text-base mt-0.5" style={{ color: '#2D2D2D' }}>
+              {tasksCompleted}/{tasksTotal} Done
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '20px' }}>delete</span>
+            <p className="section-label mt-1">Waste</p>
+            <p className="font-bold text-base mt-0.5" style={{ color: '#2D2D2D' }}>{formatCurrency(wasteTotalValue)}</p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>tune</span>
+            <p className="section-label mt-1">Calibration</p>
+            <p className="font-bold text-base mt-0.5" style={{ color: compliancePct === 100 ? '#16A34A' : '#D97706' }}>
+              {compliancePct === 100 ? 'Verified' : `${compliancePct}%`}
+            </p>
+          </div>
+          <div className="bg-white rounded-2xl p-4 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>receipt_long</span>
+            <p className="section-label mt-1">Invoices</p>
+            <p className="font-bold text-base mt-0.5" style={{ color: '#2D2D2D' }}>{invoicesCount} Filed</p>
+          </div>
+        </div>
+
+        {/* ── Tasks detail ── */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="section-label mb-3">Tasks</p>
+          <p className="section-label mb-3" style={{ color: '#296861' }}>Tasks</p>
 
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">
               {tasksCompleted} of {tasksTotal} completed
             </span>
-            <span
-              className={`text-sm font-semibold ${
-                tasksTotal === 0
-                  ? 'text-gray-400'
-                  : tasksCompleted === tasksTotal
-                  ? 'text-[#16A34A]'
-                  : 'text-[#D97706]'
-              }`}
-            >
-              {tasksTotal === 0
-                ? '—'
-                : `${Math.round((tasksCompleted / tasksTotal) * 100)}%`}
+            <span className={`text-sm font-semibold ${
+              tasksTotal === 0 ? 'text-gray-400' : tasksCompleted === tasksTotal ? 'text-[#16A34A]' : 'text-[#D97706]'
+            }`}>
+              {tasksTotal === 0 ? '—' : `${Math.round((tasksCompleted / tasksTotal) * 100)}%`}
             </span>
           </div>
 
-          {/* Progress bar */}
           {tasksTotal > 0 && (
-            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
               <div
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${(tasksCompleted / tasksTotal) * 100}%`,
-                  backgroundColor:
-                    tasksCompleted === tasksTotal ? '#16A34A' : '#D97706',
+                  backgroundColor: tasksCompleted === tasksTotal ? '#16A34A' : '#D97706',
                 }}
               />
             </div>
           )}
 
-          {/* Incomplete task list warning */}
           {incompleteTasks.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
               <p className="text-xs font-semibold text-[#D97706] mb-1.5">Incomplete tasks:</p>
@@ -622,9 +595,9 @@ export default function EODPage() {
           )}
         </div>
 
-        {/* ── Waste summary ── */}
+        {/* ── Waste detail ── */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="section-label mb-3">Waste</p>
+          <p className="section-label mb-3" style={{ color: '#296861' }}>Waste</p>
 
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm text-gray-600">Total</span>
@@ -638,7 +611,7 @@ export default function EODPage() {
               {wasteTopItems.map((item, i) => (
                 <div key={i} className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 truncate flex-1 mr-2">{item.item_name}</span>
-                  <span className="text-sm font-medium text-[#1A1A1A] shrink-0">
+                  <span className="text-sm font-medium" style={{ color: '#2D2D2D' }}>
                     {formatCurrency(item.total_cost)}
                   </span>
                 </div>
@@ -651,23 +624,17 @@ export default function EODPage() {
           )}
         </div>
 
-        {/* ── Calibration summary ── */}
+        {/* ── Calibration detail ── */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="section-label mb-3">Calibration</p>
+          <p className="section-label mb-3" style={{ color: '#296861' }}>Calibration</p>
 
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">
               {calibrationCount} calibration{calibrationCount !== 1 ? 's' : ''} logged
             </span>
-            <span
-              className={`text-sm font-semibold ${
-                compliancePct === 100
-                  ? 'text-[#16A34A]'
-                  : compliancePct >= 80
-                  ? 'text-[#D97706]'
-                  : 'text-[#DC2626]'
-              }`}
-            >
+            <span className={`text-sm font-semibold ${
+              compliancePct === 100 ? 'text-[#16A34A]' : compliancePct >= 80 ? 'text-[#D97706]' : 'text-[#DC2626]'
+            }`}>
               {compliancePct}% compliance
             </span>
           </div>
@@ -675,10 +642,7 @@ export default function EODPage() {
           {gaps.length > 0 && (
             <div className="space-y-1 mt-2">
               {gaps.map((gap, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-2 text-xs text-gray-500"
-                >
+                <div key={i} className="flex items-center gap-2 text-xs text-gray-500">
                   <span className="text-[#D97706]">△</span>
                   Gap at {formatTime(gap.gap_start)} — {gap.duration_minutes} min
                 </div>
@@ -687,16 +651,16 @@ export default function EODPage() {
           )}
         </div>
 
-        {/* ── Invoices summary ── */}
+        {/* ── Invoices detail ── */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="section-label mb-3">Invoices</p>
+          <p className="section-label mb-3" style={{ color: '#296861' }}>Invoices</p>
 
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-gray-600">
               {invoicesCount} invoice{invoicesCount !== 1 ? 's' : ''}
             </span>
             {invoicesCount > 0 && (
-              <span className="text-lg font-bold text-[#1A1A1A]">
+              <span className="text-lg font-bold" style={{ color: '#2D2D2D' }}>
                 {formatCurrency(invoicesTotalValue)}
               </span>
             )}
@@ -705,9 +669,7 @@ export default function EODPage() {
           {invoices.length > 0 && (
             <div className="space-y-0.5 mt-1">
               {invoices.map(inv => (
-                <p key={inv.id} className="text-sm text-gray-600">
-                  · {inv.supplier_name}
-                </p>
+                <p key={inv.id} className="text-sm text-gray-600">· {inv.supplier_name}</p>
               ))}
             </div>
           )}
@@ -719,15 +681,14 @@ export default function EODPage() {
 
         {/* ── Till Balance ── */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="section-label mb-3">Till Balance</p>
+          <p className="section-label mb-3" style={{ color: '#296861' }}>Till Balance</p>
 
           <div className="space-y-3">
 
-            {/* Float reference */}
             {tillFloat !== null && (
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-gray-50">
                 <span className="text-sm text-gray-500">Expected float</span>
-                <span className="text-sm font-semibold text-[#1A1A1A]">{formatCurrency(tillFloat)}</span>
+                <span className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>{formatCurrency(tillFloat)}</span>
               </div>
             )}
 
@@ -745,19 +706,19 @@ export default function EODPage() {
                   value={cashTotal}
                   onChange={e => setCashTotal(e.target.value)}
                   placeholder={tillFloat !== null ? tillFloat.toFixed(2) : '0.00'}
-                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
                 />
               </div>
             </div>
 
-            {/* Cash breakdown — shown once cash + float are available */}
+            {/* Cash breakdown */}
             {cashTotal !== '' && tillFloat !== null && (
               <div className="rounded-xl border border-gray-100 overflow-hidden">
                 <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
                   <span className="text-sm text-gray-600">
                     Cash Sales <span className="text-xs text-gray-400">({formatCurrency(cashNum)} − {formatCurrency(tillFloat)} float)</span>
                   </span>
-                  <span className="text-sm font-semibold text-[#1A1A1A]">{formatCurrency(cashSales)}</span>
+                  <span className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>{formatCurrency(cashSales)}</span>
                 </div>
                 <div className={`flex items-center justify-between px-3 py-2 ${
                   !tillIsDiscrepancy ? 'bg-green-50' : cashVariance! > 0 ? 'bg-amber-50' : 'bg-red-50'
@@ -790,12 +751,11 @@ export default function EODPage() {
                   value={eftposTotal}
                   onChange={e => setEftposTotal(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
                 />
               </div>
             </div>
 
-            {/* Total Takings */}
             {tillEntered && (
               <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                 <div>
@@ -806,7 +766,7 @@ export default function EODPage() {
                     </p>
                   )}
                 </div>
-                <span className="text-xl font-bold text-[#1A1A1A]">{formatCurrency(tillTotal)}</span>
+                <span className="text-xl font-bold" style={{ color: '#2D2D2D' }}>{formatCurrency(tillTotal)}</span>
               </div>
             )}
           </div>
@@ -820,22 +780,18 @@ export default function EODPage() {
             ? 'bg-white border-[#16A34A]'
             : 'bg-white border-[#DC2626]'
         }`}>
-          {/* Header */}
           <div className="flex items-center gap-2 mb-4">
-            <p className="section-label">Till Reconciliation</p>
+            <p className="section-label" style={{ color: '#296861' }}>Till Reconciliation</p>
             <span className="text-[#DC2626] text-xs font-semibold">Required</span>
           </div>
 
-          <p className="text-sm font-semibold text-[#1A1A1A] mb-3">Did the till balance?</p>
+          <p className="text-sm font-semibold mb-3" style={{ color: '#2D2D2D' }}>Did the till balance?</p>
 
-          {/* Yes / No toggle buttons */}
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => setTillBalanced(true)}
               className={`py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                tillBalanced === true
-                  ? 'bg-[#16A34A] text-white shadow-md'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                tillBalanced === true ? 'bg-[#16A34A] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               }`}
             >
               <span className="text-xl">✓</span>
@@ -844,15 +800,12 @@ export default function EODPage() {
             <button
               onClick={() => {
                 setTillBalanced(false)
-                // Pre-fill discrepancy amount from calculated variance if available
                 if (cashVariance !== null && tillDiscrepancyAmount === '') {
                   setTillDiscrepancyAmount(cashVariance.toFixed(2))
                 }
               }}
               className={`py-4 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all active:scale-95 ${
-                tillBalanced === false
-                  ? 'bg-[#DC2626] text-white shadow-md'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                tillBalanced === false ? 'bg-[#DC2626] text-white shadow-md' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
               }`}
             >
               <span className="text-xl">✗</span>
@@ -860,20 +813,16 @@ export default function EODPage() {
             </button>
           </div>
 
-          {/* Discrepancy fields — animate in when No is selected */}
           <div
             className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{ maxHeight: tillBalanced === false ? '400px' : '0px', opacity: tillBalanced === false ? 1 : 0 }}
           >
             <div className="pt-4 space-y-3">
-              {/* Discrepancy amount */}
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1.5 block">
                   Discrepancy Amount <span className="text-[#DC2626]">*</span>
                 </label>
-                <p className="text-xs text-gray-400 mb-2">
-                  Positive = till is over, negative = till is short
-                </p>
+                <p className="text-xs text-gray-400 mb-2">Positive = till is over, negative = till is short</p>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
                   <input
@@ -887,7 +836,6 @@ export default function EODPage() {
                 </div>
               </div>
 
-              {/* Explanation */}
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1.5 block">
                   Explanation <span className="text-[#DC2626]">*</span>
@@ -895,7 +843,7 @@ export default function EODPage() {
                 <textarea
                   value={tillExplanation}
                   onChange={e => setTillExplanation(e.target.value)}
-                  placeholder="What happened? (e.g. gave $10 refund in cash, mis-keyed sale, counted twice…)"
+                  placeholder="What happened? (e.g. gave $10 refund in cash, mis-keyed sale…)"
                   rows={3}
                   className="w-full px-4 py-3 rounded-xl border border-red-300 bg-red-50 text-base focus:outline-none focus:ring-2 focus:ring-[#DC2626] resize-none text-[#1A1A1A] placeholder-red-300"
                 />
@@ -910,7 +858,6 @@ export default function EODPage() {
             </div>
           </div>
 
-          {/* Balanced confirmation */}
           {tillBalanced === true && (
             <div className="mt-4 flex items-center gap-2 px-3 py-2 bg-green-50 rounded-xl">
               <span className="text-[#16A34A]">✓</span>
@@ -921,14 +868,18 @@ export default function EODPage() {
 
         {/* ── Notes ── */}
         <div className="bg-white rounded-2xl p-4 shadow-sm">
-          <p className="section-label mb-3">Notes</p>
+          <p className="section-label mb-3" style={{ color: '#296861' }}>Shift Notes & Observations</p>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
-            placeholder="Anything to flag for the owner…"
+            placeholder="Any discrepancies or maintenance issues to report?"
             rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] resize-none"
+            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861] resize-none"
           />
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '14px' }}>lock</span>
+            <p className="text-xs text-gray-400">Secure audit enabled</p>
+          </div>
         </div>
 
         {/* ── Submit button ── */}
@@ -936,7 +887,7 @@ export default function EODPage() {
           onClick={handleSubmitClick}
           disabled={submitting}
           className="w-full py-4 rounded-full font-bold text-white text-base disabled:opacity-40 shadow-md"
-          style={{ backgroundColor: '#B8960C' }}
+          style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
         >
           {submitting ? 'Submitting…' : 'Submit & Close Day'}
         </button>
