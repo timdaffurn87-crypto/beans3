@@ -1,36 +1,112 @@
 @import "tailwindcss";
 
+/* ─── Japandi Design Tokens ──────────────────────────────────────────────────
+   CSS custom properties define the complete visual language for Beans.
+   Update here to retheme the entire app.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Palette */
+  --bg-oatmeal:       #FAF8F3;               /* Warm cream background */
+  --fg-slate:         #2D2D2D;               /* Deep charcoal text */
+  --accent-gold:      #B8960C;               /* Primary gold/copper action */
+  --accent-matcha:    #8BA888;               /* Calm organic success */
+  --alert-terracotta: #C27D60;               /* Sophisticated attention colour */
+  --border-linen:     #E8E2D2;               /* Subtle dividers */
+  --success-green:    #16A34A;               /* Task complete / calibrated OK */
+
+  /* Glassmorphism */
+  --glass-bg:         rgba(255, 255, 255, 0.65);
+  --glass-blur:       blur(14px);
+  --glass-border:     rgba(255, 255, 255, 0.3);
+
+  /* Neumorphism-lite shadows */
+  --shadow-soft:      0 4px 20px -2px rgba(45, 45, 45, 0.08);
+  --shadow-inner:     inset 0 2px 4px 0 rgba(0, 0, 0, 0.06);
+
+  /* Radii */
+  --radius-lg:        24px;
+  --radius-md:        12px;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────── */
 @layer base {
   body {
-    background-color: #FAF8F3;
-    color: #1A1A1A;
+    background-color: var(--bg-oatmeal);
+    color: var(--fg-slate);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Playfair Display on headings gives a boutique serif feel.
+     Inter (applied to body in layout.tsx) keeps data and labels crisp. */
+  h1, h2 {
+    font-family: var(--font-playfair, Georgia, serif);
   }
 }
 
+/* ─── Utilities ──────────────────────────────────────────────────────────── */
 @layer utilities {
+  /* Uppercase spaced section labels — e.g. "OPERATIONS", "MANAGEMENT" */
   .section-label {
-    font-size: 0.75rem;
+    font-size: 0.70rem;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.12em;
     text-transform: uppercase;
     color: #9ca3af;
   }
+
+  /* Frosted glass card surface — use on top of the cream background */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+  }
+
+  /* Interactive card — smooth press-in feel when tapped */
+  .card-interactive {
+    transition: all 0.3s ease-in-out;
+    box-shadow: var(--shadow-soft);
+  }
+  .card-interactive:active {
+    box-shadow: var(--shadow-inner);
+    transform: scale(0.985);
+  }
 }
 
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+
+/* Calibration overdue — terracotta ring pulse. Urgent but calm. */
+@keyframes pulse-terracotta {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(194, 125, 96, 0.35), var(--shadow-soft); }
+  60%       { box-shadow: 0 0 0 10px rgba(194, 125, 96, 0), var(--shadow-soft); }
+}
+.animate-pulse-terracotta {
+  animation: pulse-terracotta 2.2s ease-in-out infinite;
+}
+
+/* Xero connection badge — subtle matcha dot pulse */
+@keyframes pulse-matcha {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 168, 136, 0.6); }
+  70%       { box-shadow: 0 0 0 5px rgba(139, 168, 136, 0); }
+}
+.animate-pulse-matcha {
+  animation: pulse-matcha 2s ease-in-out infinite;
+}
+
+/* Legacy red pulse — kept for backward compatibility */
 @keyframes pulse-red {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
+  50%       { opacity: 0.85; }
 }
-
 .animate-pulse-red {
   animation: pulse-red 2s ease-in-out infinite;
 }
 
+/* PIN pad shake on invalid entry */
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-8px); }
-  40% { transform: translateX(8px); }
-  60% { transform: translateX(-8px); }
-  80% { transform: translateX(8px); }
+  20%       { transform: translateX(-8px); }
+  40%       { transform: translateX(8px); }
+  60%       { transform: translateX(-8px); }
+  80%       { transform: translateX(8px); }
 }
