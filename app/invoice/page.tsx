@@ -253,16 +253,24 @@ export default function InvoicePage() {
     setTaxType(null)
   }
 
-  /** Upload a single file to Supabase Storage and return the public URL */
+  /**
+   * Upload a single file via the server-side /api/upload-photo route,
+   * which uses the service role key to bypass storage RLS.
+   */
   async function uploadPhoto(file: File, cafeDay: string): Promise<string> {
-    const supabase = createClient()
     const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}`
-    const { error } = await supabase.storage
-      .from('invoice-photos')
-      .upload(`${cafeDay}/${filename}`, file)
-    if (error) throw new Error(`Photo upload failed: ${error.message}`)
-    const { data } = supabase.storage.from('invoice-photos').getPublicUrl(`${cafeDay}/${filename}`)
-    return data.publicUrl
+    const path     = `${cafeDay}/${filename}`
+
+    const formData = new FormData()
+    formData.append('file',   file)
+    formData.append('bucket', 'invoice-photos')
+    formData.append('path',   path)
+
+    const res = await fetch('/api/upload-photo', { method: 'POST', body: formData })
+    const json = await res.json()
+
+    if (!res.ok) throw new Error(`Photo upload failed: ${json.error}`)
+    return json.url
   }
 
   /** Save the invoice to the database */
