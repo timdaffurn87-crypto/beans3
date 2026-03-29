@@ -134,7 +134,6 @@ export default function WastePage() {
     }
 
     showToast('Waste logged', 'success')
-    // Log activity
     await logActivity(
       profile.id,
       'waste_logged',
@@ -148,50 +147,67 @@ export default function WastePage() {
     setQuantity('1')
     setReason(WASTE_REASONS[0])
     setNotes('')
-    // Refresh today's log
     fetchWasteLog()
   }
 
   if (loading || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
-        <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#296861', borderTopColor: 'transparent' }} />
       </div>
     )
   }
 
-  // Live estimated loss calculation
-  const qty = parseInt(quantity, 10) || 0
+  // Computed values
+  const qty           = parseInt(quantity, 10) || 0
   const estimatedLoss = qty * selectedCostPrice
-
-  // Group menu items by category for the grouped <select>
-  const categories = Array.from(new Set(menuItems.map(m => m.category)))
-
-  // Today's running waste total
-  const wasteTotal = wasteLog.reduce((sum, w) => sum + w.total_cost, 0)
+  const categories    = Array.from(new Set(menuItems.map(m => m.category)))
+  const wasteTotal    = wasteLog.reduce((sum, w) => sum + w.total_cost, 0)
 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
-      {/* Header */}
-      <div className="px-5 pt-12 pb-6">
-        <button onClick={() => router.back()} className="text-[#B8960C] text-sm mb-3 flex items-center gap-1">
-          ← Back
-        </button>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">Waste Logger</h1>
+
+      {/* ── Header ── */}
+      <div className="px-5 pt-12 pb-4">
+        <p className="section-label mb-2" style={{ color: '#296861' }}>Inventory Management</p>
+        <h1 className="text-4xl font-bold leading-none" style={{ color: '#2D2D2D' }}>
+          Waste
+          <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
+            Logger
+          </span>
+        </h1>
+        <div className="w-10 h-0.5 rounded-full mt-3" style={{ backgroundColor: '#B8960C' }} />
       </div>
 
-      <div className="px-5 space-y-6">
-        {/* Waste form */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
-          <h2 className="font-semibold text-[#1A1A1A]">Log Waste</h2>
+      <div className="px-5 space-y-5">
+
+        {/* ── Running total banner — shown once entries exist ── */}
+        {wasteLog.length > 0 && (
+          <div className="rounded-2xl p-4 card-interactive" style={{ background: 'linear-gradient(135deg, #296861 0%, #1a4a45 100%)' }}>
+            <p className="section-label text-white/60 mb-1">Today&apos;s Waste Total</p>
+            <p className="text-4xl font-bold text-white" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif' }}>
+              {formatCurrency(wasteTotal)}
+            </p>
+            <p className="section-label text-white/40 mt-1">{wasteLog.length} {wasteLog.length === 1 ? 'entry' : 'entries'} logged</p>
+          </div>
+        )}
+
+        {/* ── Log Waste form card ── */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+
+          {/* Card header */}
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>delete</span>
+            <p className="font-semibold" style={{ color: '#2D2D2D' }}>Capture Loss</p>
+          </div>
 
           {/* Menu item — grouped select */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Menu Item</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="section-label">Menu Item</label>
             <select
               value={selectedItemId}
               onChange={e => handleItemSelect(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
             >
               <option value="">Select an item…</option>
               {categories.map(cat => (
@@ -208,117 +224,130 @@ export default function WastePage() {
             </select>
           </div>
 
-          {/* Quantity */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Quantity</label>
-            <input
-              type="number"
-              step="1"
-              min="1"
-              value={quantity}
-              onChange={e => setQuantity(e.target.value)}
-              placeholder="1"
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
-            />
-          </div>
-
-          {/* Reason */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Reason</label>
-            <select
-              value={reason}
-              onChange={e => setReason(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
-            >
-              {WASTE_REASONS.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))}
-            </select>
+          {/* Quantity + Reason in a 2-col grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label className="section-label">Quantity</label>
+              <input
+                type="number"
+                step="1"
+                min="1"
+                value={quantity}
+                onChange={e => setQuantity(e.target.value)}
+                placeholder="1"
+                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="section-label">Reason</label>
+              <select
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+              >
+                {WASTE_REASONS.map(r => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Notes */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Notes <span className="text-gray-400 font-normal">(optional)</span></label>
+          <div className="flex flex-col gap-1.5">
+            <label className="section-label">Notes <span className="normal-case font-normal text-gray-400">(optional)</span></label>
             <textarea
               value={notes}
               onChange={e => setNotes(e.target.value)}
               placeholder="Any extra details…"
               rows={2}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] resize-none"
+              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861] resize-none"
             />
           </div>
 
-          {/* Estimated loss — prominent live display */}
-          <div className="px-4 py-4 bg-[#FAF8F3] rounded-xl">
-            <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-1">Estimated Loss</p>
+          {/* Estimated loss — amber card, updates live */}
+          <div className="rounded-xl p-4" style={{ backgroundColor: '#FFF8E7' }}>
+            <p className="section-label mb-1" style={{ color: '#C47F17' }}>Estimated Loss</p>
             {selectedItemId ? (
               selectedCostPrice > 0 ? (
-                <p className="text-3xl font-bold text-[#DC2626]">{formatCurrency(estimatedLoss)}</p>
+                <p className="text-3xl font-bold" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', color: '#C47F17' }}>
+                  {formatCurrency(estimatedLoss)}
+                </p>
               ) : (
-                <p className="text-base text-gray-400">Cost price not set</p>
+                <p className="text-sm text-[#C47F17]/70">Cost price not set for this item</p>
               )
             ) : (
-              <p className="text-base text-gray-400">Select an item to calculate</p>
+              <p className="text-sm text-[#C47F17]/70">Select an item to calculate</p>
             )}
           </div>
 
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="w-full py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40"
+            className="w-full py-3 rounded-full font-semibold text-white disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
           >
-            {submitting ? 'Logging…' : 'Log Waste'}
+            {submitting ? 'Logging…' : 'Log Waste Entry'}
           </button>
         </div>
 
-        {/* Today's waste log */}
+        {/* ── Today's Waste Log ── */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="section-label">Today's Waste Log</p>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-2xl font-bold" style={{ color: '#2D2D2D' }}>
+              Today&apos;s{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Log</span>
+            </h2>
+            {wasteLog.length > 0 && (
+              <span className="text-xs font-semibold" style={{ color: '#296861' }}>{wasteLog.length} entries</span>
+            )}
           </div>
 
-          {/* Running total */}
-          {wasteLog.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">Today's Total</span>
-              <span className="text-xl font-bold text-[#DC2626]">{formatCurrency(wasteTotal)}</span>
-            </div>
-          )}
-
           {loadingLog ? (
-            <div className="flex justify-center py-6">
-              <div className="w-6 h-6 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+            <div className="flex justify-center py-8">
+              <div className="w-6 h-6 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#296861', borderTopColor: 'transparent' }} />
             </div>
           ) : wasteLog.length === 0 ? (
-            <div className="bg-white rounded-2xl p-5 shadow-sm text-center">
-              <p className="text-gray-400 text-sm">No waste logged today</p>
+            <div className="bg-white rounded-2xl p-8 text-center">
+              <span className="material-symbols-outlined text-gray-200 block mb-2" style={{ fontSize: '40px' }}>delete_outline</span>
+              <p className="text-sm text-gray-400">No waste logged today</p>
             </div>
           ) : (
             <div className="space-y-2">
-              {wasteLog.map(entry => (
-                <div key={entry.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <p className="font-semibold text-[#1A1A1A] text-sm">{entry.item_name}</p>
-                      <p className="text-sm text-gray-600 mt-0.5">
-                        {entry.quantity} × {entry.reason}
-                      </p>
-                      {entry.notes && (
-                        <p className="text-xs text-gray-400 mt-0.5 italic">{entry.notes}</p>
-                      )}
-                      <p className="text-xs text-gray-400 mt-1">
-                        {entry.profiles?.full_name ?? 'Unknown'} · {formatTime(entry.created_at)}
-                      </p>
+              {wasteLog.map((entry, index) => (
+                <div
+                  key={entry.id}
+                  className="bg-white rounded-2xl p-4 card-interactive"
+                  style={{ borderLeft: '3px solid #296861' }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      {/* Entry number */}
+                      <span className="text-2xl font-bold shrink-0" style={{ color: '#E8E2D2', fontFamily: 'var(--font-newsreader), Georgia, serif' }}>
+                        {String(wasteLog.length - index).padStart(2, '0')}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>{entry.item_name}</p>
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          <span className="text-xs text-gray-500">{entry.quantity} × {entry.reason}</span>
+                          {entry.notes && (
+                            <span className="text-xs text-gray-400 italic">{entry.notes}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          {entry.profiles?.full_name ?? 'Unknown'} · {formatTime(entry.created_at)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="font-semibold text-[#DC2626] text-sm">{formatCurrency(entry.total_cost)}</p>
-                    </div>
+                    <p className="font-bold text-sm shrink-0" style={{ color: '#DC2626' }}>
+                      {formatCurrency(entry.total_cost)}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           )}
         </div>
+
       </div>
     </div>
   )

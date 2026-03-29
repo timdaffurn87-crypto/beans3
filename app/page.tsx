@@ -323,11 +323,11 @@ function OwnerDashboard({
         <div>
           <div className="flex items-baseline justify-between mb-3">
             <h2 className="text-2xl font-bold" style={{ color: '#2D2D2D' }}>
-              Active Service{' '}
-              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Staff</span>
+              Your{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Team</span>
             </h2>
             <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full" style={{ backgroundColor: '#E6F4F1', color: '#296861' }}>
-              {data.staffProfiles.length} Active
+              {data.staffProfiles.length} staff
             </span>
           </div>
 
@@ -343,10 +343,6 @@ function OwnerDashboard({
                 <div className="flex-1 min-w-0">
                   <p className="font-semibold text-sm truncate" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
                   <p className="text-xs" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="section-label">Shift end</p>
-                  <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>15:00</p>
                 </div>
               </div>
             ))}
@@ -557,25 +553,25 @@ function ManagerDashboard({
           <Link href="/waste" className="text-sm font-semibold" style={{ color: '#296861' }}>Log →</Link>
         </div>
 
-        {/* ── On Shift Now ── */}
+        {/* ── Team ── */}
         <div>
           <h2 className="text-2xl font-bold mb-3" style={{ color: '#2D2D2D' }}>
-            On Shift{' '}
-            <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Now</span>
+            Your{' '}
+            <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Team</span>
           </h2>
           {data.staffProfiles.length > 0 ? (
-            <div className="space-y-2">
-              {data.staffProfiles.slice(0, 4).map(s => (
-                <div key={s.id} className="flex items-center gap-3">
+            <div className="flex flex-wrap gap-3">
+              {data.staffProfiles.slice(0, 6).map(s => (
+                <div key={s.id} className="flex items-center gap-2 bg-white rounded-2xl px-3 py-2 card-interactive">
                   <div
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
                     style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
                   >
                     {initials(s.full_name)}
                   </div>
                   <div>
-                    <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
-                    <p className="text-xs" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
+                    <p className="text-xs font-semibold leading-tight" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
+                    <p className="text-[10px]" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
                   </div>
                 </div>
               ))}
@@ -656,18 +652,6 @@ function StaffDashboard({
               style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #296861 0%, #73b0a8 100%)' }}
             />
           </div>
-        </div>
-
-        {/* ── Action buttons ── */}
-        <div className="grid grid-cols-2 gap-3">
-          <button className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card-interactive">
-            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '26px' }}>login</span>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#2D2D2D' }}>Clock In / Out</p>
-          </button>
-          <button className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card-interactive">
-            <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '26px' }}>coffee</span>
-            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#2D2D2D' }}>Start Break</p>
-          </button>
         </div>
 
         {/* ── Today's date card ── */}
