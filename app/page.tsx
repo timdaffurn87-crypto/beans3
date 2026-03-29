@@ -86,7 +86,7 @@ function DashboardHeader({
         >
           {initials(name)}
         </div>
-        <span className="font-semibold text-sm" style={{ color: '#296861' }}>Cocoa Artisan</span>
+        <span className="font-semibold text-sm" style={{ color: '#296861' }}>Cocoa</span>
       </div>
 
       {/* Right controls */}

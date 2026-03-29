@@ -515,7 +515,7 @@ export default function EODPage() {
         <h1 className="text-4xl font-bold leading-tight" style={{ color: '#2D2D2D' }}>
           Closing the
           <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
-            Artisan Chapter
+            The Day
           </span>
         </h1>
         <p className="text-sm text-gray-400 mt-2">

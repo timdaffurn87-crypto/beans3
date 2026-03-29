@@ -35,7 +35,7 @@ function blankLineItem(): LineItem {
   return { description: '', quantity: 1, unit_amount: 0, account_code: '300', inventory_item_code: '' }
 }
 
-// ─── Design tokens (Artisan palette used on this screen) ─────────────────────
+// ─── Design tokens (Design tokens for this screen) ─────────────────────
 const CI = {
   primary:   '#296861',
   primaryLt: '#73b0a8',
