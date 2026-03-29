@@ -5,31 +5,808 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 import { useRole } from '@/hooks/useRole'
-import { CalibrationAlert } from '@/components/CalibrationAlert'
-import { getGreeting, getCurrentCafeDay } from '@/lib/cafe-day'
-import { formatDisplayDate, formatCurrency } from '@/lib/utils'
+import { useCalibration } from '@/hooks/useCalibration'
+import { getGreeting, getCurrentCafeDay, getNowAEST } from '@/lib/cafe-day'
+import { formatDisplayDate, formatCurrency, formatTime } from '@/lib/utils'
 import { createClient } from '@/lib/supabase'
+import type { Profile, DailyTask } from '@/lib/types'
 
-interface DashboardStats {
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface DashboardData {
   tasksCompleted: number
   tasksTotal: number
   wasteTotal: number
   dayIsClosed: boolean
+  invoicesTotal: number
+  invoicesCount: number
+  calibrationCount: number
+  incompleteTasks: DailyTask[]
+  recentTasks: DailyTask[]           // first 4 for staff checklist
+  staffProfiles: Pick<Profile, 'id' | 'full_name' | 'role'>[]
 }
 
-/** Main dashboard screen — the home screen after login */
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Extracts initials from a full name — "Elena Rodriguez" → "ER" */
+function initials(name: string): string {
+  return name.split(' ').map(p => p[0]).join('').slice(0, 2).toUpperCase()
+}
+
+/** Role label for display under a staff avatar */
+function roleLabel(role: string): string {
+  if (role === 'owner') return 'Owner'
+  if (role === 'manager') return 'Manager'
+  return 'Barista'
+}
+
+/**
+ * Calculates shift progress as a 0–100% number based on where the current
+ * time falls within the café day window (default 05:30–15:00).
+ */
+function shiftProgress(start = '05:30', end = '15:00'): number {
+  const now = getNowAEST()
+  const [sh, sm] = start.split(':').map(Number)
+  const [eh, em] = end.split(':').map(Number)
+  const startMin = sh * 60 + sm
+  const endMin   = eh * 60 + em
+  const nowMin   = now.getHours() * 60 + now.getMinutes()
+  if (nowMin <= startMin) return 0
+  if (nowMin >= endMin)   return 100
+  return Math.round(((nowMin - startMin) / (endMin - startMin)) * 100)
+}
+
+/** Returns a colour token for a task completion % */
+function taskEffColour(pct: number) {
+  if (pct >= 90) return '#16A34A'
+  if (pct >= 70) return '#D97706'
+  return '#DC2626'
+}
+
+// ─── Shared header ────────────────────────────────────────────────────────────
+
+function DashboardHeader({
+  name,
+  xeroConnected,
+  onLogOut,
+  showMenu = false,
+}: {
+  name: string
+  xeroConnected: boolean
+  onLogOut: () => void
+  showMenu?: boolean
+}) {
+  return (
+    <div className="px-5 pt-12 pb-2 flex items-center justify-between">
+      {/* Avatar + wordmark */}
+      <div className="flex items-center gap-3">
+        <div
+          className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+          style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+        >
+          {initials(name)}
+        </div>
+        <span className="font-semibold text-sm" style={{ color: '#296861' }}>Cocoa Artisan</span>
+      </div>
+
+      {/* Right controls */}
+      <div className="flex items-center gap-3">
+        {xeroConnected && (
+          <span
+            className="block w-2 h-2 rounded-full animate-pulse-matcha shrink-0"
+            style={{ backgroundColor: 'var(--accent-matcha)' }}
+            title="Xero connected"
+          />
+        )}
+        <button className="text-gray-400">
+          <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>notifications</span>
+        </button>
+        {showMenu ? (
+          <button className="text-gray-400">
+            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>menu</span>
+          </button>
+        ) : (
+          <button onClick={onLogOut} className="text-gray-400">
+            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>logout</span>
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Staff avatar row ────────────────────────────────────────────────────────
+
+function StaffAvatarRow({ staff, limit = 4 }: { staff: Pick<Profile, 'id' | 'full_name' | 'role'>[]; limit?: number }) {
+  const shown = staff.slice(0, limit)
+  const rest  = staff.length - limit
+  return (
+    <div className="flex items-center gap-3">
+      {shown.map(s => (
+        <div key={s.id} className="flex flex-col items-center gap-1">
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white"
+            style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+          >
+            {initials(s.full_name)}
+          </div>
+          <p className="text-[10px] text-gray-400 max-w-[48px] text-center leading-tight truncate">{s.full_name.split(' ')[0]}</p>
+        </div>
+      ))}
+      {rest > 0 && (
+        <div className="flex flex-col items-center gap-1">
+          <div className="w-10 h-10 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center text-xs font-semibold text-gray-400">
+            +{rest}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Calibration inline card (for manager/staff dashboards) ──────────────────
+
+function CalibrationCard() {
+  const { lastCalibration, isOverdue, loading } = useCalibration()
+  if (loading) return null
+
+  if (isOverdue) {
+    return (
+      <Link href="/calibration">
+        <div className="rounded-2xl p-5 cursor-pointer" style={{ background: 'linear-gradient(135deg, #7B1E1E 0%, #B22222 100%)' }}>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.2)', color: 'white' }}>
+              Action Required
+            </span>
+          </div>
+          <h2 className="text-2xl font-bold text-white leading-tight" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>
+            Espresso Calibration Overdue
+          </h2>
+          <p className="text-sm text-white/70 mt-1">
+            {lastCalibration ? `Last calibrated at ${formatTime(lastCalibration)}` : 'Grind settings require immediate check.'}
+          </p>
+          <div className="mt-4 bg-white rounded-xl py-2.5 px-4 text-center">
+            <span className="font-semibold text-sm" style={{ color: '#B22222' }}>Calibrate Now →</span>
+          </div>
+        </div>
+      </Link>
+    )
+  }
+
+  return (
+    <div className="rounded-2xl px-4 py-3 flex items-center justify-between" style={{ backgroundColor: '#296861' }}>
+      <div>
+        <p className="text-xs font-semibold text-white/70 uppercase tracking-wider">Calibration</p>
+        <p className="text-sm font-semibold text-white">Equipment Verified ✓</p>
+      </div>
+      {lastCalibration && (
+        <p className="text-xs text-white/60">Last {formatTime(lastCalibration)}</p>
+      )}
+    </div>
+  )
+}
+
+// ─── OWNER DASHBOARD ─────────────────────────────────────────────────────────
+
+function OwnerDashboard({
+  data,
+  xeroConnected,
+  name,
+  cafeDay,
+  onLogOut,
+}: {
+  data: DashboardData
+  xeroConnected: boolean
+  name: string
+  cafeDay: string
+  onLogOut: () => void
+}) {
+  const taskPct  = data.tasksTotal > 0 ? Math.round((data.tasksCompleted / data.tasksTotal) * 100) : 0
+  const wasteTarget = 50 // default target — a real app would pull from settings
+
+  // Operations status items — blend real data with key operational checks
+  const opsItems = [
+    {
+      label: 'Grinder Calibration',
+      done: data.calibrationCount > 0,
+      warn: false,
+    },
+    {
+      label: `Waste Logged (${formatCurrency(data.wasteTotal)})`,
+      done: data.wasteTotal > 0,
+      warn: data.wasteTotal > wasteTarget,
+    },
+    {
+      label: `Tasks Progress (${data.tasksCompleted}/${data.tasksTotal})`,
+      done: data.tasksCompleted === data.tasksTotal && data.tasksTotal > 0,
+      warn: data.tasksTotal > 0 && taskPct < 70,
+    },
+    {
+      label: 'End of Day Cash Count',
+      done: data.dayIsClosed,
+      warn: false,
+    },
+  ]
+
+  return (
+    <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
+      <DashboardHeader name={name} xeroConnected={xeroConnected} onLogOut={onLogOut} showMenu />
+
+      {/* ── Heading ── */}
+      <div className="px-5 pt-4 pb-2">
+        <p className="section-label mb-1" style={{ color: '#296861' }}>Overview</p>
+        <h1 className="leading-none" style={{ color: '#2D2D2D' }}>
+          <span className="text-5xl font-bold block">The Daily</span>
+          <span className="text-5xl font-bold block" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Ledger</span>
+        </h1>
+      </div>
+
+      {/* Date + Generate Report */}
+      <div className="px-5 pb-4 flex items-center gap-3">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-xl border border-gray-200">
+          <span className="material-symbols-outlined text-gray-400" style={{ fontSize: '14px' }}>calendar_today</span>
+          <span className="text-sm font-medium" style={{ color: '#2D2D2D' }}>{formatDisplayDate(cafeDay)}</span>
+        </div>
+        <Link
+          href="/results"
+          className="flex-1 py-2 rounded-xl text-center text-sm font-semibold text-white"
+          style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+        >
+          Generate Report
+        </Link>
+      </div>
+
+      <div className="px-5 space-y-4">
+
+        {/* ── Invoice / Revenue card ── */}
+        <div className="bg-white rounded-2xl p-5 card-interactive">
+          <div className="flex items-start justify-between mb-3">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>receipt_long</span>
+            {data.invoicesCount > 0 && (
+              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{ backgroundColor: '#E6F4F1', color: '#296861' }}>
+                +{data.invoicesCount} invoices
+              </span>
+            )}
+          </div>
+          <p className="section-label mb-1">Today&apos;s Invoice Total</p>
+          <p className="text-4xl font-bold leading-none" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', color: '#2D2D2D' }}>
+            {formatCurrency(data.invoicesTotal)}
+          </p>
+        </div>
+
+        {/* ── Waste card ── */}
+        <div className="bg-white rounded-2xl p-5 card-interactive">
+          <div className="flex items-start justify-between mb-3">
+            <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '22px' }}>delete</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full" style={{
+              backgroundColor: data.wasteTotal > wasteTarget ? '#FEE2E2' : '#F0FDF4',
+              color: data.wasteTotal > wasteTarget ? '#DC2626' : '#16A34A',
+            }}>
+              {data.wasteTotal > wasteTarget ? 'Over target' : 'On track'}
+            </span>
+          </div>
+          <p className="section-label mb-1">Waste Cost</p>
+          <p className="text-4xl font-bold leading-none" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', color: '#2D2D2D' }}>
+            {formatCurrency(data.wasteTotal)}
+          </p>
+          <div className="mt-3">
+            <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${Math.min(100, (data.wasteTotal / wasteTarget) * 100)}%`,
+                  backgroundColor: data.wasteTotal > wasteTarget ? '#DC2626' : '#16A34A',
+                }}
+              />
+            </div>
+            <p className="section-label mt-1">
+              {Math.round((data.wasteTotal / wasteTarget) * 100)}% of daily threshold
+            </p>
+          </div>
+        </div>
+
+        {/* ── Task Efficiency — dark teal card ── */}
+        <div className="rounded-2xl p-5 card-interactive" style={{ background: 'linear-gradient(135deg, #296861 0%, #1a4a45 100%)' }}>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="material-symbols-outlined text-white/70" style={{ fontSize: '20px' }}>checklist</span>
+            <p className="section-label text-white/60">Task Efficiency</p>
+          </div>
+          <p className="text-5xl font-bold text-white" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>
+            {taskPct}%
+          </p>
+          <p className="section-label mt-1 text-white/50">
+            {data.tasksCompleted}/{data.tasksTotal} operations complete
+          </p>
+        </div>
+
+        {/* ── Active Staff ── */}
+        <div>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-2xl font-bold" style={{ color: '#2D2D2D' }}>
+              Active Service{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Staff</span>
+            </h2>
+            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full" style={{ backgroundColor: '#E6F4F1', color: '#296861' }}>
+              {data.staffProfiles.length} Active
+            </span>
+          </div>
+
+          <div className="space-y-2">
+            {data.staffProfiles.slice(0, 5).map(s => (
+              <div key={s.id} className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3 card-interactive">
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                  style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+                >
+                  {initials(s.full_name)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
+                  <p className="text-xs" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="section-label">Shift end</p>
+                  <p className="text-sm font-bold" style={{ color: '#2D2D2D' }}>15:00</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Operations Status ── */}
+        <div className="bg-white rounded-2xl p-4 card-interactive">
+          <h2 className="text-lg font-bold mb-3" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', color: '#2D2D2D' }}>
+            Operations Status
+          </h2>
+          <div className="space-y-3">
+            {opsItems.map((item, i) => (
+              <div key={i} className="flex items-center gap-3">
+                {item.done && !item.warn ? (
+                  <span className="material-symbols-outlined text-[#16A34A]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                ) : item.warn ? (
+                  <span className="material-symbols-outlined text-[#DC2626]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>error</span>
+                ) : (
+                  <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '20px' }}>radio_button_unchecked</span>
+                )}
+                <p className={`text-sm ${item.done && !item.warn ? 'text-gray-500' : item.warn ? 'font-semibold text-[#DC2626]' : 'text-gray-700'}`}>
+                  {item.label}
+                </p>
+              </div>
+            ))}
+          </div>
+          <Link
+            href="/tasks"
+            className="mt-4 w-full flex items-center justify-center py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600"
+          >
+            View Full Checklist
+          </Link>
+        </div>
+
+        {/* ── Inventory Alert (teal image card) ── */}
+        <div
+          className="rounded-2xl overflow-hidden p-5 card-interactive"
+          style={{ background: 'linear-gradient(135deg, #1a4a45 0%, #0d2d29 100%)' }}
+        >
+          <p className="section-label text-white/50 mb-2">Inventory Alert</p>
+          <p className="text-lg font-bold text-white leading-snug" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>
+            Check supply levels before close.
+          </p>
+          <p className="text-sm text-white/60 mt-1">Reorder suggested by Tuesday.</p>
+          <Link href="/admin/menu" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white/80">
+            View Menu Items <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+          </Link>
+        </div>
+
+        {/* ── Management links ── */}
+        <div className="grid grid-cols-2 gap-3 pb-2">
+          <Link href="/admin/settings" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>manage_accounts</span>
+            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>Settings</p>
+            <p className="text-xs text-gray-400">Staff & config</p>
+          </Link>
+          <Link href="/eod" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>nights_stay</span>
+            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>End of Day</p>
+            <p className="text-xs text-gray-400">Close the shift</p>
+          </Link>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ─── MANAGER DASHBOARD ────────────────────────────────────────────────────────
+
+function ManagerDashboard({
+  data,
+  xeroConnected,
+  name,
+  onLogOut,
+}: {
+  data: DashboardData
+  xeroConnected: boolean
+  name: string
+  onLogOut: () => void
+}) {
+  const taskPct = data.tasksTotal > 0 ? Math.round((data.tasksCompleted / data.tasksTotal) * 100) : 0
+
+  return (
+    <div className="min-h-screen pb-28" style={{ backgroundColor: '#FAF8F3' }}>
+      <DashboardHeader name={name} xeroConnected={xeroConnected} onLogOut={onLogOut} />
+
+      {/* ── Shift Performance hero ── */}
+      <div className="px-5 pt-4 pb-2">
+        <p className="section-label mb-1" style={{ color: '#296861' }}>Current Shift Performance</p>
+        <p className="text-5xl font-bold leading-none" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', color: '#2D2D2D' }}>
+          {formatCurrency(data.invoicesTotal)}
+        </p>
+        <p className="text-sm text-gray-400 mt-1">
+          <span className="text-[#16A34A] font-semibold">↑ {taskPct}%</span> task completion vs. shift target
+        </p>
+        {/* Action buttons */}
+        <div className="flex gap-3 mt-3">
+          <Link href="/eod" className="flex-1 py-2.5 rounded-xl border border-gray-300 text-center text-sm font-semibold text-gray-600">
+            View Report
+          </Link>
+          <Link href="/results" className="flex-1 py-2.5 rounded-xl text-center text-sm font-semibold text-white" style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}>
+            Daily Ledger
+          </Link>
+        </div>
+      </div>
+
+      <div className="px-5 space-y-4 mt-2">
+
+        {/* ── Calibration card ── */}
+        <CalibrationCard />
+
+        {/* ── Operations ── */}
+        <div>
+          <p className="section-label mb-2" style={{ color: '#296861' }}>Operations</p>
+          <div className="space-y-2">
+            <Link href="/waste" className="flex items-center bg-white rounded-2xl px-4 py-3 gap-3 card-interactive">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#FFF8E7' }}>
+                <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '20px' }}>delete</span>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>Log Waste</p>
+                <p className="text-xs" style={{ color: '#73b0a8' }}>Food & Beverage</p>
+              </div>
+              <span className="text-gray-300">›</span>
+            </Link>
+            <Link href="/invoice" className="flex items-center bg-white rounded-2xl px-4 py-3 gap-3 card-interactive">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: '#E6F4F1' }}>
+                <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>receipt_long</span>
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>Scan Invoice</p>
+                <p className="text-xs" style={{ color: '#73b0a8' }}>Inventory Intake</p>
+              </div>
+              <span className="text-gray-300">›</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* ── Tasks Remaining ── */}
+        <div>
+          <div className="flex items-baseline justify-between mb-1">
+            <h2 className="text-2xl font-bold" style={{ color: '#2D2D2D' }}>
+              Tasks{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Remaining</span>
+            </h2>
+            <span className="text-xl text-gray-300">···</span>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">
+            {data.tasksCompleted} of {data.tasksTotal} completed for Morning Shift
+          </p>
+
+          <div className="space-y-2">
+            {data.recentTasks.slice(0, 5).map((task) => {
+              const done = !!task.completed_at
+              return (
+                <div key={task.id} className="bg-white rounded-2xl px-4 py-3 flex items-start gap-3">
+                  {/* Square checkbox */}
+                  <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 mt-0.5 ${
+                    done ? 'border-[#296861]' : 'border-gray-300'
+                  }`} style={done ? { backgroundColor: '#296861' } : {}}>
+                    {done && <span className="material-symbols-outlined text-white" style={{ fontSize: '12px', fontVariationSettings: "'FILL' 1" }}>check</span>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-semibold leading-tight ${done ? 'line-through text-gray-400' : ''}`} style={done ? {} : { color: '#2D2D2D' }}>
+                      {task.title}
+                    </p>
+                    {task.description && (
+                      <p className="text-xs text-gray-400 mt-0.5 leading-tight">{task.description}</p>
+                    )}
+                  </div>
+                  {done ? (
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: '#F0FDF4', color: '#16A34A' }}>Done</span>
+                  ) : task.station === 'brew_bar' ? (
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: '#FFF8E7', color: '#C47F17' }}>Priority</span>
+                  ) : (
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full shrink-0 bg-gray-100 text-gray-500">Routine</span>
+                  )}
+                </div>
+              )
+            })}
+
+            {data.tasksTotal === 0 && (
+              <div className="bg-white rounded-2xl p-4 text-center">
+                <p className="text-sm text-gray-400">No tasks generated yet</p>
+              </div>
+            )}
+          </div>
+
+          {data.tasksTotal > 5 && (
+            <Link href="/tasks" className="mt-2 flex items-center justify-center gap-1 text-sm font-semibold py-2" style={{ color: '#296861' }}>
+              View all {data.tasksTotal} tasks
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+            </Link>
+          )}
+        </div>
+
+        {/* ── Waste summary card ── */}
+        <div className="bg-white rounded-2xl px-4 py-4 flex items-center gap-4 card-interactive">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#FFF8E7' }}>
+            <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '22px' }}>delete</span>
+          </div>
+          <div className="flex-1">
+            <p className="section-label">Waste Today</p>
+            <p className="text-xl font-bold" style={{ color: '#2D2D2D' }}>{formatCurrency(data.wasteTotal)}</p>
+          </div>
+          <Link href="/waste" className="text-sm font-semibold" style={{ color: '#296861' }}>Log →</Link>
+        </div>
+
+        {/* ── On Shift Now ── */}
+        <div>
+          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2D2D2D' }}>
+            On Shift{' '}
+            <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Now</span>
+          </h2>
+          {data.staffProfiles.length > 0 ? (
+            <div className="space-y-2">
+              {data.staffProfiles.slice(0, 4).map(s => (
+                <div key={s.id} className="flex items-center gap-3">
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                    style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+                  >
+                    {initials(s.full_name)}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
+                    <p className="text-xs" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">No staff data available</p>
+          )}
+        </div>
+
+        {/* ── Admin links ── */}
+        <div className="grid grid-cols-2 gap-3 pb-2">
+          <Link href="/results" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>bar_chart</span>
+            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>7-Day Results</p>
+            <p className="text-xs text-gray-400">Performance</p>
+          </Link>
+          <Link href="/admin/tasks" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>edit_note</span>
+            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>Manage Tasks</p>
+            <p className="text-xs text-gray-400">Templates</p>
+          </Link>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
+// ─── STAFF / BARISTA DASHBOARD ────────────────────────────────────────────────
+
+function StaffDashboard({
+  data,
+  xeroConnected,
+  name,
+  cafeDay,
+  onLogOut,
+}: {
+  data: DashboardData
+  xeroConnected: boolean
+  name: string
+  cafeDay: string
+  onLogOut: () => void
+}) {
+  const firstName   = name.split(' ')[0]
+  const greeting    = getGreeting()
+  const progress    = shiftProgress()
+  const taskPct     = data.tasksTotal > 0 ? Math.round((data.tasksCompleted / data.tasksTotal) * 100) : 0
+
+  return (
+    <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
+      <DashboardHeader name={name} xeroConnected={xeroConnected} onLogOut={onLogOut} />
+
+      {/* ── Greeting ── */}
+      <div className="px-5 pt-4 pb-3">
+        <p className="section-label mb-1" style={{ color: '#296861' }}>Staff Portal</p>
+        <h1 className="text-4xl font-bold leading-tight" style={{ color: '#2D2D2D' }}>
+          {greeting},{' '}
+          <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
+            {firstName}.
+          </span>
+        </h1>
+      </div>
+
+      <div className="px-5 space-y-4">
+
+        {/* ── Shift Progress ── */}
+        <div className="bg-white rounded-2xl p-4 card-interactive">
+          <p className="section-label mb-1">Shift Progress</p>
+          <div className="flex items-end gap-1">
+            <p className="text-5xl font-bold" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', color: '#2D2D2D' }}>
+              {progress}
+            </p>
+            <p className="text-2xl font-semibold mb-1 text-gray-400">%</p>
+          </div>
+          <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #296861 0%, #73b0a8 100%)' }}
+            />
+          </div>
+        </div>
+
+        {/* ── Action buttons ── */}
+        <div className="grid grid-cols-2 gap-3">
+          <button className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '26px' }}>login</span>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#2D2D2D' }}>Clock In / Out</p>
+          </button>
+          <button className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '26px' }}>coffee</span>
+            <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#2D2D2D' }}>Start Break</p>
+          </button>
+        </div>
+
+        {/* ── Today's date card ── */}
+        <div className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3">
+          <span className="material-symbols-outlined text-gray-400" style={{ fontSize: '20px' }}>calendar_today</span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>{formatDisplayDate(cafeDay)}</p>
+            <p className="text-xs text-gray-400">Morning Shift · Main Floor</p>
+          </div>
+        </div>
+
+        {/* ── Calibration card ── */}
+        <CalibrationCard />
+
+        {/* ── Quick action cards ── */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { href: '/calibration', icon: 'tune', label: 'Calibrate' },
+            { href: '/waste',       icon: 'delete', label: 'Log Waste' },
+            { href: '/invoice',     icon: 'receipt_long', label: 'Invoice' },
+          ].map(item => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="bg-white rounded-2xl p-3 flex flex-col items-center gap-2 card-interactive"
+            >
+              <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '24px' }}>{item.icon}</span>
+              <p className="text-[11px] font-semibold text-center text-gray-500">{item.label}</p>
+            </Link>
+          ))}
+        </div>
+
+        {/* ── Daily Checklist ── */}
+        <div className="bg-white rounded-2xl p-4 card-interactive">
+          <div className="flex items-baseline justify-between mb-1">
+            <p className="font-bold text-lg" style={{ color: '#2D2D2D' }}>
+              Daily{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Checklist</span>
+            </p>
+            <p className="text-xs text-gray-400">{data.tasksCompleted} of {data.tasksTotal} tasks</p>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">Essential floor management tasks.</p>
+
+          {/* Efficiency bar */}
+          <div className="flex items-center justify-between mb-3">
+            <p className="section-label">Efficiency</p>
+            <p className="section-label" style={{ color: taskEffColour(taskPct) }}>{taskPct}%</p>
+          </div>
+          <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${taskPct}%`, backgroundColor: taskEffColour(taskPct) }}
+            />
+          </div>
+
+          {data.recentTasks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-2">No tasks yet today</p>
+          ) : (
+            <div className="space-y-2">
+              {data.recentTasks.slice(0, 4).map(task => {
+                const done = !!task.completed_at
+                return (
+                  <div key={task.id} className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
+                      done ? 'border-[#296861]' : 'border-gray-300'
+                    }`} style={done ? { backgroundColor: '#296861' } : {}}>
+                      {done && <span className="material-symbols-outlined text-white" style={{ fontSize: '11px', fontVariationSettings: "'FILL' 1" }}>check</span>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm font-medium leading-tight ${done ? 'line-through text-gray-400' : ''}`} style={done ? {} : { color: '#2D2D2D' }}>
+                        {task.title}
+                      </p>
+                      {task.description && (
+                        <p className="text-[11px] text-gray-400 uppercase tracking-wide mt-0.5">{task.description}</p>
+                      )}
+                    </div>
+                    {!done && (
+                      <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '18px' }}>drag_indicator</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {data.tasksTotal > 0 && (
+            <Link
+              href="/tasks"
+              className="mt-3 flex items-center justify-center gap-1 text-sm font-semibold"
+              style={{ color: '#296861' }}
+            >
+              Open full checklist
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+            </Link>
+          )}
+        </div>
+
+        {/* ── Day status banner ── */}
+        {data.dayIsClosed ? (
+          <div className="rounded-2xl px-4 py-3 flex items-center gap-3" style={{ backgroundColor: '#E6F4F1' }}>
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            <p className="text-sm font-semibold" style={{ color: '#296861' }}>Day closed · EOD submitted</p>
+          </div>
+        ) : (
+          <Link href="/eod" className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>nights_stay</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>End of Day</p>
+              <p className="text-xs text-gray-400">Submit shift report</p>
+            </div>
+            <span className="text-gray-300">›</span>
+          </Link>
+        )}
+
+      </div>
+    </div>
+  )
+}
+
+// ─── ROOT PAGE ────────────────────────────────────────────────────────────────
+
+/** Main dashboard — renders one of three role-specific views */
 export default function DashboardPage() {
   const { profile, loading } = useAuth()
   const { isManager, isOwner } = useRole()
   const router = useRouter()
-  const [stats, setStats] = useState<DashboardStats>({
-    tasksCompleted: 0, tasksTotal: 0, wasteTotal: 0, dayIsClosed: false,
-  })
 
-  /**
-   * Xero connection status — shown as a small pulsing dot in the header.
-   * Queries xero_tokens directly; RLS means non-owners get null automatically.
-   */
+  const [data, setData] = useState<DashboardData>({
+    tasksCompleted: 0,
+    tasksTotal: 0,
+    wasteTotal: 0,
+    dayIsClosed: false,
+    invoicesTotal: 0,
+    invoicesCount: 0,
+    calibrationCount: 0,
+    incompleteTasks: [],
+    recentTasks: [],
+    staffProfiles: [],
+  })
   const [xeroConnected, setXeroConnected] = useState(false)
 
   // Redirect to login if not authenticated
@@ -37,196 +814,80 @@ export default function DashboardPage() {
     if (!loading && !profile) router.push('/login')
   }, [profile, loading, router])
 
-  // Fetch today's stats
+  // Fetch all dashboard data
   useEffect(() => {
     if (!profile) return
 
-    async function fetchStats() {
+    async function fetchData() {
       const supabase = createClient()
-      const cafeDay = getCurrentCafeDay()
+      const cafeDay  = getCurrentCafeDay()
 
-      // Fetch task counts, waste total, and EOD report status in parallel
-      const [tasksRes, wasteRes, eodRes] = await Promise.all([
-        supabase.from('daily_tasks').select('id, completed_at').eq('cafe_day', cafeDay),
+      const [tasksRes, wasteRes, eodRes, invoicesRes, calRes, staffRes] = await Promise.all([
+        supabase.from('daily_tasks').select('*').eq('cafe_day', cafeDay).order('created_at'),
         supabase.from('waste_logs').select('total_cost').eq('cafe_day', cafeDay),
         supabase.from('eod_reports').select('id').eq('cafe_day', cafeDay).single(),
+        supabase.from('invoices').select('total_amount').eq('cafe_day', cafeDay),
+        supabase.from('calibrations').select('id').eq('cafe_day', cafeDay),
+        supabase.from('profiles').select('id, full_name, role').eq('is_active', true),
       ])
 
-      const tasksCompleted = tasksRes.data?.filter(t => t.completed_at).length ?? 0
-      const tasksTotal     = tasksRes.data?.length ?? 0
-      const wasteTotal     = wasteRes.data?.reduce((sum, w) => sum + w.total_cost, 0) ?? 0
-      const dayIsClosed    = !!eodRes.data
+      const tasks            = (tasksRes.data as DailyTask[]) ?? []
+      const tasksCompleted   = tasks.filter(t => t.completed_at).length
+      const wasteTotal       = wasteRes.data?.reduce((s, w) => s + w.total_cost, 0) ?? 0
+      const invoicesTotal    = invoicesRes.data?.reduce((s, i) => s + i.total_amount, 0) ?? 0
 
-      setStats({ tasksCompleted, tasksTotal, wasteTotal, dayIsClosed })
+      setData({
+        tasksCompleted,
+        tasksTotal:        tasks.length,
+        wasteTotal,
+        dayIsClosed:       !!eodRes.data,
+        invoicesTotal,
+        invoicesCount:     invoicesRes.data?.length ?? 0,
+        calibrationCount:  calRes.data?.length ?? 0,
+        incompleteTasks:   tasks.filter(t => !t.completed_at),
+        recentTasks:       tasks,
+        staffProfiles:     (staffRes.data ?? []) as Pick<Profile, 'id' | 'full_name' | 'role'>[],
+      })
     }
 
-    fetchStats()
+    fetchData()
   }, [profile])
 
-  // Check Xero connection — RLS returns empty for non-owners so the dot
-  // only appears for the owner when a token row exists.
+  // Xero connection status (RLS: only owner sees a row)
   useEffect(() => {
     if (!profile) return
-    const supabase = createClient()
-    supabase
+    createClient()
       .from('xero_tokens')
       .select('id')
       .single()
-      .then(({ data }) => setXeroConnected(!!data))
+      .then(({ data: d }) => setXeroConnected(!!d))
   }, [profile])
+
+  // Sign out helper
+  async function handleLogOut() {
+    const { signOut } = await import('@/lib/auth')
+    await signOut()
+    router.push('/login')
+  }
 
   if (loading || !profile) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
-        <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#296861', borderTopColor: 'transparent' }} />
       </div>
     )
   }
 
-  const greeting    = getGreeting()
-  const cafeDay     = getCurrentCafeDay()
-  const displayDate = formatDisplayDate(cafeDay)
-  const firstName   = profile.full_name.split(' ')[0]
+  const cafeDay  = getCurrentCafeDay()
+  const fullName = profile.full_name
 
-  const quickActions = [
-    { href: '/calibration', label: 'Coffee Calibration', desc: 'Log a dial-in',             icon: '☕' },
-    { href: '/waste',       label: 'Waste Logger',       desc: 'Record waste',              icon: '🗑' },
-    { href: '/tasks',       label: 'Daily Tasks',        desc: 'Check off tasks',           icon: '✓' },
-    { href: '/invoice',     label: 'Scan Invoice',       desc: 'Capture delivery receipts', icon: '📄' },
-    { href: '/recipes',     label: 'Recipe Book',        desc: 'View recipes',              icon: '📖' },
-    { href: '/eod',         label: 'End of Day',         desc: 'Submit shift report',       icon: '🌙' },
-  ]
+  if (isOwner) {
+    return <OwnerDashboard data={data} xeroConnected={xeroConnected} name={fullName} cafeDay={cafeDay} onLogOut={handleLogOut} />
+  }
 
-  const managerActions = [
-    { href: '/results',          label: '7-Day Results', desc: 'Performance overview', icon: '📊' },
-    { href: '/admin/settings',   label: 'Settings',      desc: 'Staff & café config',  icon: '⚙' },
-  ]
+  if (isManager) {
+    return <ManagerDashboard data={data} xeroConnected={xeroConnected} name={fullName} onLogOut={handleLogOut} />
+  }
 
-  return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: 'var(--bg-oatmeal)' }}>
-
-      {/* ── Header ────────────────────────────────────────────────────────── */}
-      <div className="px-5 pt-12 pb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            {/* Playfair Display greeting — applied via h1 rule in globals.css */}
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--fg-slate)' }}>
-              {greeting}, {firstName}.
-            </h1>
-
-            <div className="flex items-center gap-2 mt-0.5">
-              <p className="text-sm text-gray-400">{displayDate}</p>
-              {stats.dayIsClosed && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-[#16A34A] font-medium">
-                  Day Closed
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Right side: Xero status dot + Log Out */}
-          <div className="flex items-center gap-3 mt-1">
-            {/* Xero connection indicator — only visible to owner when connected.
-                8px circle with a matcha pulse animation. */}
-            {xeroConnected && (
-              <span
-                className="block w-2 h-2 rounded-full animate-pulse-matcha"
-                style={{ backgroundColor: 'var(--accent-matcha)' }}
-                title="Xero connected"
-              />
-            )}
-
-            <button
-              onClick={async () => {
-                const { signOut } = await import('@/lib/auth')
-                await signOut()
-                router.push('/login')
-              }}
-              className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Log Out
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-5 space-y-5">
-
-        {/* Calibration alert — highest priority element on the screen */}
-        <CalibrationAlert />
-
-        {/* ── Summary cards ─────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white rounded-2xl p-4 card-interactive">
-            <p className="section-label mb-1">Today&apos;s Waste</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: 'var(--fg-slate)' }}>
-              {formatCurrency(stats.wasteTotal)}
-            </p>
-          </div>
-          <div className="bg-white rounded-2xl p-4 card-interactive">
-            <p className="section-label mb-1">Tasks Done</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: 'var(--fg-slate)' }}>
-              {stats.tasksTotal > 0 ? `${stats.tasksCompleted}/${stats.tasksTotal}` : '—'}
-            </p>
-            {stats.tasksTotal > 0 && (
-              <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{
-                    width: `${(stats.tasksCompleted / stats.tasksTotal) * 100}%`,
-                    backgroundColor: 'var(--accent-gold)',
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Operations ────────────────────────────────────────────────── */}
-        <div>
-          <p className="section-label mb-3">Operations</p>
-          <div className="space-y-2">
-            {quickActions.map(action => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="flex items-center bg-white rounded-2xl p-4 card-interactive"
-              >
-                <span className="text-2xl mr-4 w-8 text-center">{action.icon}</span>
-                <div className="flex-1">
-                  <p className="font-semibold" style={{ color: 'var(--fg-slate)' }}>{action.label}</p>
-                  <p className="text-sm text-gray-400">{action.desc}</p>
-                </div>
-                <span className="text-gray-300 text-lg">›</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Management (manager / owner only) ─────────────────────────── */}
-        {(isManager || isOwner) && (
-          <div>
-            <p className="section-label mb-3">Management</p>
-            <div className="space-y-2">
-              {managerActions.map(action => (
-                <Link
-                  key={action.href}
-                  href={action.href}
-                  className="flex items-center bg-white rounded-2xl p-4 card-interactive"
-                >
-                  <span className="text-2xl mr-4 w-8 text-center">{action.icon}</span>
-                  <div className="flex-1">
-                    <p className="font-semibold" style={{ color: 'var(--fg-slate)' }}>{action.label}</p>
-                    <p className="text-sm text-gray-400">{action.desc}</p>
-                  </div>
-                  <span className="text-gray-300 text-lg">›</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-      </div>
-    </div>
-  )
+  return <StaffDashboard data={data} xeroConnected={xeroConnected} name={fullName} cafeDay={cafeDay} onLogOut={handleLogOut} />
 }
