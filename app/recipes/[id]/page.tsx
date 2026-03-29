@@ -91,7 +91,7 @@ export default function RecipeDetailPage() {
         <button onClick={() => router.push('/recipes')} className="text-[#B8960C] text-sm mb-6">
           ← Recipes
         </button>
-        <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
+        <div className="bg-white rounded-2xl p-6 text-center">
           <p className="font-semibold text-[#1A1A1A]">Recipe not found</p>
           <p className="text-sm text-gray-400 mt-1">It may have been deleted.</p>
         </div>
@@ -164,7 +164,7 @@ export default function RecipeDetailPage() {
             <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-3">
               Ingredients
             </p>
-            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-2">
+            <div className="bg-white rounded-2xl p-4 space-y-2">
               {recipe.ingredients.map((ing, i) => (
                 <div key={i} className="flex items-start gap-2">
                   <span className="text-[#B8960C] mt-0.5">•</span>
@@ -184,7 +184,7 @@ export default function RecipeDetailPage() {
             <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-3">
               Method
             </p>
-            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="bg-white rounded-2xl p-4 space-y-3">
               {recipe.method.map((step, i) => (
                 <div key={i} className="flex gap-3">
                   <span className="text-[#B8960C] font-bold text-sm shrink-0 mt-0.5">
@@ -203,7 +203,7 @@ export default function RecipeDetailPage() {
             <p className="text-xs font-semibold tracking-widest uppercase text-gray-400 mb-3">
               Notes
             </p>
-            <div className="bg-white rounded-2xl p-4 shadow-sm">
+            <div className="bg-white rounded-2xl p-4">
               <p className="text-sm text-gray-600 italic leading-relaxed">{recipe.notes}</p>
             </div>
           </div>
@@ -220,7 +220,7 @@ export default function RecipeDetailPage() {
                 Delete Recipe
               </button>
             ) : (
-              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border border-red-100">
+              <div className="bg-white rounded-2xl p-4 space-y-3 border border-red-100">
                 <p className="font-semibold text-[#1A1A1A] text-sm text-center">
                   Delete &ldquo;{recipe.name}&rdquo;?
                 </p>
@@ -435,7 +435,7 @@ function RecipeEditForm({
             value={name}
             onChange={e => setName(e.target.value)}
             placeholder="e.g. Signature Latte"
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
         </div>
 
@@ -445,7 +445,7 @@ function RecipeEditForm({
           <select
             value={category}
             onChange={e => setCategory(e.target.value as Category)}
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           >
             <option value="coffee">Coffee</option>
             <option value="food">Food</option>
@@ -473,7 +473,7 @@ function RecipeEditForm({
                     value={ing.name}
                     onChange={e => updateIngredient(i, 'name', e.target.value)}
                     placeholder="Ingredient name"
-                    className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="flex-1 px-3 py-2 rounded-lg bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861]"
                   />
                   <button
                     onClick={() => removeIngredient(i)}
@@ -488,14 +488,14 @@ function RecipeEditForm({
                     value={ing.quantity}
                     onChange={e => updateIngredient(i, 'quantity', e.target.value)}
                     placeholder="Quantity (e.g. 22)"
-                    className="px-3 py-2 rounded-lg border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="px-3 py-2 rounded-lg bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861]"
                   />
                   <input
                     type="text"
                     value={ing.unit}
                     onChange={e => updateIngredient(i, 'unit', e.target.value)}
                     placeholder="Unit (e.g. g, ml)"
-                    className="px-3 py-2 rounded-lg border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="px-3 py-2 rounded-lg bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861]"
                   />
                 </div>
               </div>
@@ -523,7 +523,7 @@ function RecipeEditForm({
                   onChange={e => updateStep(i, e.target.value)}
                   placeholder={`Step ${i + 1}`}
                   rows={2}
-                  className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C] resize-none"
+                  className="flex-1 px-3 py-2 rounded-lg bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861] resize-none"
                 />
                 <button
                   onClick={() => removeStep(i)}
@@ -546,7 +546,7 @@ function RecipeEditForm({
             onChange={e => setNotes(e.target.value)}
             placeholder="e.g. Use oat milk for oat latte variant"
             rows={3}
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C] resize-none"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861] resize-none"
           />
         </div>
 

@@ -126,7 +126,7 @@ export default function TaskTemplatesPage() {
             <div className="w-6 h-6 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : templates.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
+          <div className="bg-white rounded-2xl p-6 text-center">
             <p className="text-gray-400 text-sm">No templates yet. Add one above.</p>
           </div>
         ) : (
@@ -231,7 +231,7 @@ function AddTemplateForm({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+    <div className="bg-white rounded-2xl p-4 space-y-3">
       <h3 className="font-semibold text-[#1A1A1A]">New Template</h3>
 
       <div className="flex flex-col gap-1">
@@ -241,7 +241,7 @@ function AddTemplateForm({
           value={title}
           onChange={e => setTitle(e.target.value)}
           placeholder="e.g. Clean steam wand"
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -252,7 +252,7 @@ function AddTemplateForm({
           onChange={e => setDescription(e.target.value)}
           placeholder="Additional details or instructions"
           rows={2}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] resize-none"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861] resize-none"
         />
       </div>
 
@@ -261,7 +261,7 @@ function AddTemplateForm({
         <select
           value={station}
           onChange={e => setStation(e.target.value as Station)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         >
           {STATION_OPTIONS.map(s => (
             <option key={s} value={s}>{STATION_LABELS[s]}</option>
@@ -277,7 +277,7 @@ function AddTemplateForm({
           value={sortOrder}
           onChange={e => setSortOrder(e.target.value)}
           placeholder="0"
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -338,7 +338,7 @@ function TemplateCard({
 
   if (!isEditing) {
     return (
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="bg-white rounded-2xl p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-[#1A1A1A] text-sm">{template.title}</p>
@@ -361,7 +361,7 @@ function TemplateCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border-2 border-[#B8960C]/20">
+    <div className="bg-white rounded-2xl p-4 space-y-3 border-2 border-[#B8960C]/20">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-[#1A1A1A]">Edit Template</h3>
         <button onClick={onCancelEdit} className="text-gray-400 text-sm">Cancel</button>
@@ -373,7 +373,7 @@ function TemplateCard({
           type="text"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -383,7 +383,7 @@ function TemplateCard({
           value={description}
           onChange={e => setDescription(e.target.value)}
           rows={2}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] resize-none"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861] resize-none"
         />
       </div>
 
@@ -392,7 +392,7 @@ function TemplateCard({
         <select
           value={station}
           onChange={e => setStation(e.target.value as Station)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         >
           {STATION_OPTIONS.map(s => (
             <option key={s} value={s}>{STATION_LABELS[s]}</option>
@@ -407,7 +407,7 @@ function TemplateCard({
           step="1"
           value={sortOrder}
           onChange={e => setSortOrder(e.target.value)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 

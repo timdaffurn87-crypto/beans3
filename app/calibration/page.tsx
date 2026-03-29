@@ -133,7 +133,7 @@ export default function CalibrationPage() {
       <div className="px-5 space-y-5">
 
         {/* Precision Metrics card — calibration form */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl p-5 space-y-4">
           {/* Card header */}
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '20px' }}>tune</span>
@@ -151,9 +151,7 @@ export default function CalibrationPage() {
                 value={grinderSetting}
                 onChange={e => setGrinderSetting(e.target.value)}
                 placeholder="e.g. 3.5"
-                className="bg-[#FAF8F3] rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2"
-                style={{ focusRingColor: '#296861' } as React.CSSProperties}
-                onFocus={e => e.currentTarget.style.setProperty('--tw-ring-color', '#296861')}
+                className="bg-[#f1ede7] rounded-xl border-0 border-b-2 border-transparent px-4 py-3 text-base focus:outline-none focus:border-[#296861]"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -165,7 +163,7 @@ export default function CalibrationPage() {
                 value={dose}
                 onChange={e => setDose(e.target.value)}
                 placeholder="e.g. 22.0"
-                className="bg-[#FAF8F3] rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                className="bg-[#f1ede7] rounded-xl border-0 border-b-2 border-transparent px-4 py-3 text-base focus:outline-none focus:border-[#296861]"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -177,7 +175,7 @@ export default function CalibrationPage() {
                 value={yield_}
                 onChange={e => setYield(e.target.value)}
                 placeholder="e.g. 36.0"
-                className="bg-[#FAF8F3] rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                className="bg-[#f1ede7] rounded-xl border-0 border-b-2 border-transparent px-4 py-3 text-base focus:outline-none focus:border-[#296861]"
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -189,7 +187,7 @@ export default function CalibrationPage() {
                 value={time}
                 onChange={e => setTime(e.target.value)}
                 placeholder="e.g. 28"
-                className="bg-[#FAF8F3] rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                className="bg-[#f1ede7] rounded-xl border-0 border-b-2 border-transparent px-4 py-3 text-base focus:outline-none focus:border-[#296861]"
               />
             </div>
           </div>
@@ -205,7 +203,7 @@ export default function CalibrationPage() {
               onChange={e => setNotes(e.target.value)}
               placeholder="e.g. Pulled slightly sour, adjusted 0.5 finer"
               rows={2}
-              className="bg-[#FAF8F3] rounded-xl border border-gray-200 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-[#296861] resize-none"
+              className="bg-[#f1ede7] rounded-xl border-0 border-b-2 border-transparent px-4 py-3 text-base focus:outline-none focus:border-[#296861] resize-none"
             />
           </div>
 
@@ -261,7 +259,7 @@ export default function CalibrationPage() {
             </div>
           ) : history.length === 0 ? (
             /* Empty state */
-            <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
+            <div className="bg-white rounded-2xl p-8 text-center">
               <span className="material-symbols-outlined text-gray-200 block mb-2" style={{ fontSize: '48px' }}>coffee</span>
               <p className="text-gray-400 text-sm">No calibrations logged today</p>
             </div>

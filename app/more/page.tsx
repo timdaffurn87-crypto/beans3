@@ -32,7 +32,7 @@ export default function MorePage() {
           <Link
             key={item.href}
             href={item.href}
-            className="flex items-center bg-white rounded-2xl p-4 shadow-sm active:scale-[0.98] transition-transform"
+            className="flex items-center bg-white rounded-2xl p-4 active:scale-[0.98] transition-transform"
           >
             <span className="text-2xl mr-4 w-8 text-center">{item.icon}</span>
             <div className="flex-1">
@@ -49,7 +49,7 @@ export default function MorePage() {
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center bg-white rounded-2xl p-4 shadow-sm active:scale-[0.98] transition-transform"
+                className="flex items-center bg-white rounded-2xl p-4 active:scale-[0.98] transition-transform"
               >
                 <span className="text-2xl mr-4 w-8 text-center">{item.icon}</span>
                 <div className="flex-1">

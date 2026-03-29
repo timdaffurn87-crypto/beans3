@@ -193,7 +193,7 @@ export default function WastePage() {
         )}
 
         {/* ── Log Waste form card ── */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl p-5 space-y-4">
 
           {/* Card header */}
           <div className="flex items-center gap-2">
@@ -207,7 +207,7 @@ export default function WastePage() {
             <select
               value={selectedItemId}
               onChange={e => handleItemSelect(e.target.value)}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+              className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
             >
               <option value="">Select an item…</option>
               {categories.map(cat => (
@@ -235,7 +235,7 @@ export default function WastePage() {
                 value={quantity}
                 onChange={e => setQuantity(e.target.value)}
                 placeholder="1"
-                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -243,7 +243,7 @@ export default function WastePage() {
               <select
                 value={reason}
                 onChange={e => setReason(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
               >
                 {WASTE_REASONS.map(r => (
                   <option key={r} value={r}>{r}</option>
@@ -260,7 +260,7 @@ export default function WastePage() {
               onChange={e => setNotes(e.target.value)}
               placeholder="Any extra details…"
               rows={2}
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861] resize-none"
+              className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861] resize-none"
             />
           </div>
 

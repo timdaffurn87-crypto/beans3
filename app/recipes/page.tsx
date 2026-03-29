@@ -120,7 +120,7 @@ export default function RecipesPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search recipes…"
-            className="w-full pl-9 pr-4 py-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="w-full pl-9 pr-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861]"
           />
         </div>
       </div>
@@ -151,7 +151,7 @@ export default function RecipesPage() {
             <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
+          <div className="bg-white rounded-2xl p-8 text-center">
             {recipes.length === 0 ? (
               <>
                 <p className="text-2xl mb-2">📖</p>
@@ -175,7 +175,7 @@ export default function RecipesPage() {
               <button
                 key={recipe.id}
                 onClick={() => router.push(`/recipes/${recipe.id}`)}
-                className="w-full bg-white rounded-2xl shadow-sm overflow-hidden flex items-center gap-4 p-3 text-left active:scale-[0.99] transition-transform"
+                className="w-full bg-white rounded-2xl overflow-hidden flex items-center gap-4 p-3 text-left active:scale-[0.99] transition-transform"
               >
                 {/* Photo or placeholder initials */}
                 {recipe.photo_url ? (

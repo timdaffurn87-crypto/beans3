@@ -262,7 +262,7 @@ export default function MenuPage() {
 
         {/* PREVIEW: photo captured, offer extract */}
         {scanMode === 'preview' && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-[#1A1A1A]">Menu Board Photo</h3>
               <button onClick={resetScan} className="text-gray-400 text-sm">Cancel</button>
@@ -287,7 +287,7 @@ export default function MenuPage() {
 
         {/* EXTRACTING: spinner */}
         {scanMode === 'extracting' && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm flex flex-col items-center gap-4">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4">
             <div className="w-10 h-10 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
             <p className="font-semibold text-[#1A1A1A]">Reading menu board with AI…</p>
             <p className="text-sm text-gray-400 text-center">Claude is identifying items and prices.</p>
@@ -296,7 +296,7 @@ export default function MenuPage() {
 
         {/* IMPORTING: spinner */}
         {scanMode === 'importing' && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm flex flex-col items-center gap-4">
+          <div className="bg-white rounded-2xl p-8 flex flex-col items-center gap-4">
             <div className="w-10 h-10 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
             <p className="font-semibold text-[#1A1A1A]">Importing items…</p>
           </div>
@@ -304,7 +304,7 @@ export default function MenuPage() {
 
         {/* REVIEW: extracted items list with checkboxes and inline editing */}
         {scanMode === 'review' && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-4 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-[#1A1A1A]">
                 Review Extracted Items
@@ -414,7 +414,7 @@ export default function MenuPage() {
             <div className="w-6 h-6 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : visibleItems.length === 0 ? (
-          <div className="bg-white rounded-2xl p-6 shadow-sm text-center">
+          <div className="bg-white rounded-2xl p-6 text-center">
             <p className="text-gray-400 text-sm">No menu items yet. Add one above.</p>
           </div>
         ) : (
@@ -480,7 +480,7 @@ function AddItemForm({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+    <div className="bg-white rounded-2xl p-4 space-y-3">
       <h3 className="font-semibold text-[#1A1A1A]">New Menu Item</h3>
 
       <div className="flex flex-col gap-1">
@@ -490,7 +490,7 @@ function AddItemForm({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="e.g. Flat White"
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -499,7 +499,7 @@ function AddItemForm({
         <select
           value={category}
           onChange={e => setCategory(e.target.value as Category)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         >
           <option value="coffee">Coffee</option>
           <option value="food">Food</option>
@@ -518,7 +518,7 @@ function AddItemForm({
             value={sellPrice}
             onChange={e => setSellPrice(e.target.value)}
             placeholder="0.00"
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -530,7 +530,7 @@ function AddItemForm({
             value={costPrice}
             onChange={e => setCostPrice(e.target.value)}
             placeholder="0.00"
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
         </div>
       </div>
@@ -590,7 +590,7 @@ function MenuItemCard({
 
   if (!isEditing) {
     return (
-      <div className={`bg-white rounded-2xl p-4 shadow-sm ${!item.is_active ? 'opacity-50' : ''}`}>
+      <div className={`bg-white rounded-2xl p-4 ${!item.is_active ? 'opacity-50' : ''}`}>
         <div className="flex items-center justify-between">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -619,7 +619,7 @@ function MenuItemCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border-2 border-[#B8960C]/20">
+    <div className="bg-white rounded-2xl p-4 space-y-3 border-2 border-[#B8960C]/20">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-[#1A1A1A]">Edit {item.name}</h3>
         <button onClick={onCancelEdit} className="text-gray-400 text-sm">Cancel</button>
@@ -631,7 +631,7 @@ function MenuItemCard({
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -640,7 +640,7 @@ function MenuItemCard({
         <select
           value={category}
           onChange={e => setCategory(e.target.value as Category)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         >
           <option value="coffee">Coffee</option>
           <option value="food">Food</option>
@@ -658,7 +658,7 @@ function MenuItemCard({
             min="0"
             value={sellPrice}
             onChange={e => setSellPrice(e.target.value)}
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -669,7 +669,7 @@ function MenuItemCard({
             min="0"
             value={costPrice}
             onChange={e => setCostPrice(e.target.value)}
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
         </div>
       </div>

@@ -536,7 +536,7 @@ export default function InvoicePage() {
               }}
             >
               <div className="flex items-center gap-4">
-                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm">
+                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center">
                   <span className="material-symbols-outlined" style={{ color: CI.secondary }}>edit_note</span>
                 </div>
                 <div className="text-left">
@@ -558,7 +558,7 @@ export default function InvoicePage() {
             CHOOSE MODE — preview + AI extract option
             ════════════════════════════════════════════════════════════════ */}
         {uiMode === 'choose' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4 mb-10"
+          <div className="bg-white rounded-2xl p-6 space-y-4 mb-10"
             style={{ boxShadow: '0 4px 20px rgba(28,28,24,0.06)' }}>
 
             {/* PDF attachment (single file, no multi-page) */}

@@ -241,7 +241,7 @@ export default function ResultsPage() {
 
           {/* Inline target edit form (owner only, when editing) */}
           {isOwner && editingTargets && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="bg-white rounded-2xl p-4 space-y-3">
               <div className="flex items-center justify-between mb-1">
                 <p className="font-semibold text-sm" style={{ color: '#2D2D2D' }}>Edit Targets</p>
                 <button onClick={() => setEditingTargets(false)} className="text-sm text-gray-400">Cancel</button>
@@ -251,7 +251,7 @@ export default function ResultsPage() {
                 <input
                   type="number" step="1" min="0" value={editWaste}
                   onChange={e => setEditWaste(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                  className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -259,7 +259,7 @@ export default function ResultsPage() {
                 <input
                   type="number" step="1" min="0" max="100" value={editTasks}
                   onChange={e => setEditTasks(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                  className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                 />
               </div>
               <div className="flex flex-col gap-1">
@@ -267,7 +267,7 @@ export default function ResultsPage() {
                 <input
                   type="number" step="1" min="0" max="100" value={editCal}
                   onChange={e => setEditCal(e.target.value)}
-                  className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                  className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                 />
               </div>
               <button

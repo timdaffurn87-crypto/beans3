@@ -136,7 +136,7 @@ export default function LoginPage() {
                 'h-16 rounded-2xl text-xl font-semibold transition-all active:scale-90',
                 isDelete
                   ? 'bg-transparent text-gray-400 text-2xl'
-                  : 'bg-white shadow-sm text-[#1A1A1A] hover:bg-gray-50 active:bg-gray-100'
+                  : 'bg-white text-[#1A1A1A] hover:bg-gray-50 active:bg-gray-100'
               )}
               disabled={loading}
             >
@@ -209,7 +209,7 @@ function FirstLaunchSetup({ onComplete }: { onComplete: () => void }) {
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Tim"
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+              className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
             />
           </div>
 
@@ -222,7 +222,7 @@ function FirstLaunchSetup({ onComplete }: { onComplete: () => void }) {
               value={pin}
               onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+              className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
             />
           </div>
 
@@ -235,7 +235,7 @@ function FirstLaunchSetup({ onComplete }: { onComplete: () => void }) {
               value={confirmPin}
               onChange={e => setConfirmPin(e.target.value.replace(/\D/g, ''))}
               placeholder="••••"
-              className="px-4 py-3 rounded-xl border border-gray-200 bg-white text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+              className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
             />
           </div>
 

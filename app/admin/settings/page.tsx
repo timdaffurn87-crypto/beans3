@@ -395,7 +395,7 @@ export default function SettingsPage() {
             {/* ── Café Configuration ── */}
             <div>
               <p className="section-label mb-3">Café Configuration</p>
-              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="bg-white rounded-2xl p-4 space-y-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Owner Email</label>
                   <input
@@ -403,7 +403,7 @@ export default function SettingsPage() {
                     value={ownerEmail}
                     onChange={e => setOwnerEmail(e.target.value)}
                     placeholder="owner@example.com"
-                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                   />
                   <p className="text-xs text-gray-400">EOD reports will be emailed to this address</p>
                 </div>
@@ -415,7 +415,7 @@ export default function SettingsPage() {
                       type="time"
                       value={cafeDayStart}
                       onChange={e => setCafeDayStart(e.target.value)}
-                      className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                      className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                     />
                   </div>
                   <div className="flex flex-col gap-1">
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                       type="time"
                       value={cafeDayEnd}
                       onChange={e => setCafeDayEnd(e.target.value)}
-                      className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                      className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                     />
                   </div>
                 </div>
@@ -441,7 +441,7 @@ export default function SettingsPage() {
                       value={tillFloat}
                       onChange={e => setTillFloat(e.target.value)}
                       placeholder="200.00"
-                      className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                      className="w-full pl-8 pr-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                     />
                   </div>
                 </div>
@@ -459,7 +459,7 @@ export default function SettingsPage() {
             {/* ── API Keys ── */}
             <div>
               <p className="section-label mb-3">API Keys</p>
-              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+              <div className="bg-white rounded-2xl p-4 space-y-4">
 
                 {/* Claude API Key */}
                 <div>
@@ -492,7 +492,7 @@ export default function SettingsPage() {
                         value={claudeKeyInput}
                         onChange={e => setClaudeKeyInput(e.target.value)}
                         placeholder="sk-ant-…"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C] font-mono text-sm"
+                        className="w-full px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861] font-mono text-sm"
                       />
                       <div className="flex gap-2">
                         {claudeKeyConfigured && (
@@ -515,7 +515,6 @@ export default function SettingsPage() {
                   )}
                 </div>
 
-                <div className="border-t border-gray-100" />
 
                 {/* Gemini API Key — fallback for invoice extraction */}
                 <div>
@@ -547,7 +546,7 @@ export default function SettingsPage() {
                         value={geminiKeyInput}
                         onChange={e => setGeminiKeyInput(e.target.value)}
                         placeholder="AIzaSy…"
-                        className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                        className="w-full px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                       />
                       <div className="flex gap-2">
                         {geminiKeyConfigured && (
@@ -576,7 +575,7 @@ export default function SettingsPage() {
             {/* ── Xero Integration ── */}
             <div>
               <p className="section-label mb-3">Xero Integration</p>
-              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
+              <div className="bg-white rounded-2xl p-4 space-y-4">
 
                 {/* Connection status — display-only, setup is done via Edge Function */}
                 {xeroStatusLoading ? (
@@ -621,7 +620,6 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                <div className="border-t border-gray-100" />
 
                 {/* GST-inclusive suppliers — stored in dedicated gst_inclusive_suppliers table */}
                 <div>
@@ -659,7 +657,7 @@ export default function SettingsPage() {
                       onChange={e => setNewSupplierInput(e.target.value)}
                       onKeyDown={e => e.key === 'Enter' && handleAddSupplier()}
                       placeholder="Supplier name (e.g. Ozone Coffee)"
-                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861]"
                     />
                     <button
                       onClick={handleAddSupplier}
@@ -676,7 +674,7 @@ export default function SettingsPage() {
             {/* ── Performance Targets ── */}
             <div>
               <p className="section-label mb-3">Performance Targets</p>
-              <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
+              <div className="bg-white rounded-2xl p-4 space-y-3">
                 <div className="flex flex-col gap-1">
                   <label className="text-sm font-medium text-gray-700">Daily Waste Limit ($)</label>
                   <input
@@ -686,7 +684,7 @@ export default function SettingsPage() {
                     value={targetWaste}
                     onChange={e => setTargetWaste(e.target.value)}
                     placeholder="50"
-                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -699,7 +697,7 @@ export default function SettingsPage() {
                     value={targetTasks}
                     onChange={e => setTargetTasks(e.target.value)}
                     placeholder="90"
-                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                   />
                 </div>
                 <div className="flex flex-col gap-1">
@@ -712,7 +710,7 @@ export default function SettingsPage() {
                     value={targetCal}
                     onChange={e => setTargetCal(e.target.value)}
                     placeholder="100"
-                    className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+                    className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                   />
                 </div>
                 <button
@@ -769,7 +767,7 @@ function AddStaffForm({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm mb-3 space-y-3">
+    <div className="bg-white rounded-2xl p-4 mb-3 space-y-3">
       <h3 className="font-semibold text-[#1A1A1A]">New Staff Member</h3>
 
       <div className="flex flex-col gap-1">
@@ -779,7 +777,7 @@ function AddStaffForm({
           value={name}
           onChange={e => setName(e.target.value)}
           placeholder="Full name"
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -788,7 +786,7 @@ function AddStaffForm({
         <select
           value={role}
           onChange={e => setRole(e.target.value as 'barista' | 'manager' | 'owner')}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         >
           <option value="barista">Barista</option>
           <option value="manager">Manager</option>
@@ -806,7 +804,7 @@ function AddStaffForm({
             value={pin}
             onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
             placeholder="4–6 digits"
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="flex-1 px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
           <button
             type="button"
@@ -891,7 +889,7 @@ function StaffCard({
 
   if (!isEditing) {
     return (
-      <div className="bg-white rounded-2xl p-4 shadow-sm">
+      <div className="bg-white rounded-2xl p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#B8960C]/10 flex items-center justify-center">
@@ -925,7 +923,7 @@ function StaffCard({
   }
 
   return (
-    <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3 border-2 border-[#B8960C]/20">
+    <div className="bg-white rounded-2xl p-4 space-y-3 border-2 border-[#B8960C]/20">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-[#1A1A1A]">Edit {member.full_name}</h3>
         <button onClick={onCancelEdit} className="text-gray-400 text-sm">Cancel</button>
@@ -937,7 +935,7 @@ function StaffCard({
           type="text"
           value={name}
           onChange={e => setName(e.target.value)}
-          className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+          className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         />
       </div>
 
@@ -947,7 +945,7 @@ function StaffCard({
           <select
             value={role}
             onChange={e => setRole(e.target.value as Profile['role'])}
-            className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           >
             <option value="barista">Barista</option>
             <option value="manager">Manager</option>
@@ -965,7 +963,7 @@ function StaffCard({
             maxLength={6}
             value={pin}
             onChange={e => setPin(e.target.value.replace(/\D/g, ''))}
-            className="flex-1 px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]"
+            className="flex-1 px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           />
           <button
             type="button"

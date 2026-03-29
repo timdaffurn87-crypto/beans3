@@ -238,7 +238,7 @@ export default function TasksPage() {
 
         {/* Generating spinner */}
         {generating && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm flex items-center gap-3 justify-center">
+          <div className="bg-white rounded-2xl p-6 flex items-center gap-3 justify-center">
             <div className="w-5 h-5 border-3 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
             <p className="text-sm text-gray-500">Generating today's tasks…</p>
           </div>
@@ -253,7 +253,7 @@ export default function TasksPage() {
 
         {/* Empty state — no templates set up yet */}
         {!generating && !loadingTasks && totalCount === 0 && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
+          <div className="bg-white rounded-2xl p-8 text-center">
             <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '48px' }}>checklist</span>
             <p className="font-semibold mt-3" style={{ color: '#2D2D2D' }}>No tasks for today</p>
             {(isManager || isOwner) ? (

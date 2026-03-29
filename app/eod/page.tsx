@@ -397,7 +397,7 @@ export default function EODPage() {
     return (
       <div className="min-h-screen pb-24 flex flex-col" style={{ backgroundColor: '#FAF8F3' }}>
         <div className="flex-1 flex items-center justify-center px-5">
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center w-full max-w-sm">
+          <div className="bg-white rounded-2xl p-8 text-center w-full max-w-sm">
             <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: '#E6F4F1' }}>
               <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '32px' }}>check_circle</span>
             </div>
@@ -432,7 +432,7 @@ export default function EODPage() {
     return (
       <div className="min-h-screen flex items-center justify-center pb-24" style={{ backgroundColor: '#FAF8F3' }}>
         <div className="px-5 w-full max-w-sm space-y-3">
-          <div className="bg-white rounded-2xl p-8 shadow-sm text-center">
+          <div className="bg-white rounded-2xl p-8 text-center">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
               hasDiscrepancy ? 'bg-red-100' : ''
             }`} style={!hasDiscrepancy ? { backgroundColor: '#E6F4F1' } : {}}>
@@ -554,7 +554,7 @@ export default function EODPage() {
         </div>
 
         {/* ── Tasks detail ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl p-4">
           <p className="section-label mb-3" style={{ color: '#296861' }}>Tasks</p>
 
           <div className="flex items-center justify-between mb-2">
@@ -596,7 +596,7 @@ export default function EODPage() {
         </div>
 
         {/* ── Waste detail ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl p-4">
           <p className="section-label mb-3" style={{ color: '#296861' }}>Waste</p>
 
           <div className="flex items-center justify-between mb-3">
@@ -625,7 +625,7 @@ export default function EODPage() {
         </div>
 
         {/* ── Calibration detail ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl p-4">
           <p className="section-label mb-3" style={{ color: '#296861' }}>Calibration</p>
 
           <div className="flex items-center justify-between mb-2">
@@ -652,7 +652,7 @@ export default function EODPage() {
         </div>
 
         {/* ── Invoices detail ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl p-4">
           <p className="section-label mb-3" style={{ color: '#296861' }}>Invoices</p>
 
           <div className="flex items-center justify-between mb-2">
@@ -680,7 +680,7 @@ export default function EODPage() {
         </div>
 
         {/* ── Till Balance ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl p-4">
           <p className="section-label mb-3" style={{ color: '#296861' }}>Till Balance</p>
 
           <div className="space-y-3">
@@ -706,7 +706,7 @@ export default function EODPage() {
                   value={cashTotal}
                   onChange={e => setCashTotal(e.target.value)}
                   placeholder={tillFloat !== null ? tillFloat.toFixed(2) : '0.00'}
-                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                 />
               </div>
             </div>
@@ -751,13 +751,13 @@ export default function EODPage() {
                   value={eftposTotal}
                   onChange={e => setEftposTotal(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-7 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861]"
+                  className="w-full pl-7 pr-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
                 />
               </div>
             </div>
 
             {tillEntered && (
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+              <div className="flex items-center justify-between pt-2">
                 <div>
                   <span className="text-sm font-semibold text-gray-700">Total Takings</span>
                   {cashTotal !== '' && eftposTotal !== '' && (
@@ -773,7 +773,7 @@ export default function EODPage() {
         </div>
 
         {/* ── Till Reconciliation ── */}
-        <div className={`rounded-2xl p-4 shadow-sm border-2 transition-colors ${
+        <div className={`rounded-2xl p-4 border-2 transition-colors ${
           tillBalanced === null
             ? 'bg-white border-gray-200'
             : tillBalanced
@@ -867,14 +867,14 @@ export default function EODPage() {
         </div>
 
         {/* ── Notes ── */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm">
+        <div className="bg-white rounded-2xl p-4">
           <p className="section-label mb-3" style={{ color: '#296861' }}>Shift Notes & Observations</p>
           <textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder="Any discrepancies or maintenance issues to report?"
             rows={3}
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#296861] resize-none"
+            className="w-full px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861] resize-none"
           />
           <div className="flex items-center gap-1.5 mt-2">
             <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '14px' }}>lock</span>
