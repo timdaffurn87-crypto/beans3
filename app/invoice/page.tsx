@@ -35,19 +35,35 @@ function blankLineItem(): LineItem {
   return { description: '', quantity: 1, unit_amount: 0, account_code: '300', inventory_item_code: '' }
 }
 
+// ─── Design tokens (Artisan palette used on this screen) ─────────────────────
+const CI = {
+  primary:   '#296861',
+  primaryLt: '#73b0a8',
+  surface:   '#fdf9f3',
+  surfaceCt: '#f1ede7',
+  surfaceCtLow: '#f7f3ed',
+  surfaceCtHigh: '#ece8e2',
+  onSurface: '#1c1c18',
+  tertiary:  '#5f5e5e',
+  secondary: '#7c5725',
+  secondaryCt: '#fecb8e',
+  outlineVar: '#bfc9c6',
+  gradient: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)',
+}
+
 /** Invoice Scanning page — all roles */
 export default function InvoicePage() {
   const { profile, loading } = useAuth()
   const router = useRouter()
   const { showToast } = useToast()
-  const cameraInputRef = useRef<HTMLInputElement>(null)
+  const cameraInputRef  = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
-  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const pdfInputRef     = useRef<HTMLInputElement>(null)
 
   // File state
-  const [photo, setPhoto] = useState<File | null>(null)
+  const [photo, setPhoto]               = useState<File | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [isPdf, setIsPdf] = useState(false)
+  const [isPdf, setIsPdf]               = useState(false)
 
   // UI mode: capture → choose → extracting → form
   const [uiMode, setUiMode] = useState<'capture' | 'choose' | 'extracting' | 'form'>('capture')
@@ -60,12 +76,12 @@ export default function InvoicePage() {
   const [taxType, setTaxType] = useState<'INCLUSIVE' | 'EXCLUSIVE' | 'NOTAX' | null>(null)
 
   // Form fields — aligned to Xero Bill Import columns
-  const [supplierName, setSupplierName] = useState('')       // ContactName
-  const [supplierEmail, setSupplierEmail] = useState('')     // EmailAddress
-  const [invoiceNumber, setInvoiceNumber] = useState('')     // InvoiceNumber
-  const [invoiceDate, setInvoiceDate] = useState('')         // InvoiceDate (YYYY-MM-DD)
-  const [dueDate, setDueDate] = useState('')                 // DueDate (YYYY-MM-DD)
-  const [lineItems, setLineItems] = useState<LineItem[]>([blankLineItem()])
+  const [supplierName, setSupplierName]   = useState('')   // ContactName
+  const [supplierEmail, setSupplierEmail] = useState('')   // EmailAddress
+  const [invoiceNumber, setInvoiceNumber] = useState('')   // InvoiceNumber
+  const [invoiceDate, setInvoiceDate]     = useState('')   // InvoiceDate (YYYY-MM-DD)
+  const [dueDate, setDueDate]             = useState('')   // DueDate (YYYY-MM-DD)
+  const [lineItems, setLineItems]         = useState<LineItem[]>([blankLineItem()])
 
   // Auto-set due date to 30 days after invoice date when invoice date changes
   useEffect(() => {
@@ -74,8 +90,8 @@ export default function InvoicePage() {
     }
   }, [invoiceDate])
 
-  const [submitting, setSubmitting] = useState(false)
-  const [todayInvoices, setTodayInvoices] = useState<Invoice[]>([])
+  const [submitting, setSubmitting]         = useState(false)
+  const [todayInvoices, setTodayInvoices]   = useState<Invoice[]>([])
   const [loadingInvoices, setLoadingInvoices] = useState(true)
 
   useEffect(() => {
@@ -108,9 +124,9 @@ export default function InvoicePage() {
     setPhoto(file)
     setPhotoPreview(pdf ? null : URL.createObjectURL(file))
     setUiMode('choose')
-    if (cameraInputRef.current) cameraInputRef.current.value = ''
+    if (cameraInputRef.current)  cameraInputRef.current.value  = ''
     if (libraryInputRef.current) libraryInputRef.current.value = ''
-    if (pdfInputRef.current) pdfInputRef.current.value = ''
+    if (pdfInputRef.current)     pdfInputRef.current.value     = ''
   }
 
   function handleRemovePhoto() {
@@ -129,7 +145,7 @@ export default function InvoicePage() {
     setUiMode('extracting')
 
     try {
-      const base64 = await fileToBase64(photo)
+      const base64   = await fileToBase64(photo)
       const response = await fetch('/api/ai-extract-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,23 +159,20 @@ export default function InvoicePage() {
         return
       }
 
-      // Populate form with extracted values
       setSupplierName(data.supplier_name || '')
       setSupplierEmail(data.supplier_email || '')
       setInvoiceNumber(data.invoice_number || '')
       setInvoiceDate(data.invoice_date || '')
-      // due_date: use AI value if present, else auto-set via the useEffect above
       if (data.due_date) setDueDate(data.due_date)
       else if (data.invoice_date) setDueDate(addDays(data.invoice_date, 30))
 
-      // Map AI line items to our structure
       if (Array.isArray(data.line_items) && data.line_items.length > 0) {
         setLineItems(data.line_items.map((item: Partial<LineItem>) => ({
-          description: item.description || '',
-          quantity: item.quantity ?? 1,
-          unit_amount: item.unit_amount ?? 0,
-          account_code: item.account_code || '300',
-          inventory_item_code: item.inventory_item_code || '',
+          description:          item.description          || '',
+          quantity:             item.quantity             ?? 1,
+          unit_amount:          item.unit_amount          ?? 0,
+          account_code:         item.account_code         || '300',
+          inventory_item_code:  item.inventory_item_code  || '',
         })))
       } else {
         setLineItems([blankLineItem()])
@@ -226,42 +239,41 @@ export default function InvoicePage() {
   async function handleSubmit() {
     if (!profile) return
 
-    if (!supplierName.trim()) { showToast('Supplier name is required', 'error'); return }
-    if (!invoiceNumber.trim()) { showToast('Invoice number is required', 'error'); return }
-    if (!invoiceDate) { showToast('Invoice date is required', 'error'); return }
-    if (!dueDate) { showToast('Due date is required', 'error'); return }
-    if (lineItems.length === 0) { showToast('Add at least one line item', 'error'); return }
+    if (!supplierName.trim())  { showToast('Supplier name is required', 'error');   return }
+    if (!invoiceNumber.trim()) { showToast('Invoice number is required', 'error');   return }
+    if (!invoiceDate)          { showToast('Invoice date is required', 'error');     return }
+    if (!dueDate)              { showToast('Due date is required', 'error');         return }
+    if (lineItems.length === 0){ showToast('Add at least one line item', 'error');   return }
 
     setSubmitting(true)
     const supabase = createClient()
-    const cafeDay = getCurrentCafeDay()
+    const cafeDay  = getCurrentCafeDay()
 
     try {
       let photoUrl = ''
       if (photo) photoUrl = await uploadPhoto(photo, cafeDay)
 
-      // Calculate total from line items (quantity × unit_amount)
       const totalAmount = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_amount), 0)
 
-      // gst_flagged invoices get xero_sync_status='review' — they are excluded
-      // from the 3 PM batch until a manager resolves the GST treatment manually.
+      // gst_flagged invoices get xero_sync_status='review' — excluded from
+      // the 3 PM batch until a manager resolves the GST treatment manually.
       const xeroSyncStatus = gstFlagged ? 'review' : 'pending'
 
       const { error } = await supabase.from('invoices').insert({
-        scanned_by: profile.id,
-        supplier_name: supplierName.trim(),
-        supplier_email: supplierEmail.trim() || null,
-        invoice_date: invoiceDate,
-        due_date: dueDate,
+        scanned_by:       profile.id,
+        supplier_name:    supplierName.trim(),
+        supplier_email:   supplierEmail.trim() || null,
+        invoice_date:     invoiceDate,
+        due_date:         dueDate,
         reference_number: invoiceNumber.trim(),
-        total_amount: totalAmount,
-        line_items: lineItems,
-        photo_url: photoUrl,
-        ai_confidence: aiConfidence,
-        status: 'pending',
-        cafe_day: cafeDay,
-        gst_flagged: gstFlagged,
-        tax_type: taxType,
+        total_amount:     totalAmount,
+        line_items:       lineItems,
+        photo_url:        photoUrl,
+        ai_confidence:    aiConfidence,
+        status:           'pending',
+        cafe_day:         cafeDay,
+        gst_flagged:      gstFlagged,
+        tax_type:         taxType,
         xero_sync_status: xeroSyncStatus,
       })
 
@@ -278,127 +290,276 @@ export default function InvoicePage() {
     }
   }
 
+  // ─── Loading guard ────────────────────────────────────────────────────────
   if (loading || !profile) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#FAF8F3' }}>
-        <div className="w-8 h-8 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: CI.surface }}>
+        <div className="w-8 h-8 border-4 border-t-transparent rounded-full animate-spin" style={{ borderColor: CI.primary }} />
       </div>
     )
   }
 
   const todayTotal = todayInvoices.reduce((sum, inv) => sum + inv.total_amount, 0)
 
+  /** Returns a Xero-sync status badge for invoice list rows */
+  function XeroBadge({ inv }: { inv: Invoice }) {
+    if (inv.xero_sync_status === 'synced') return (
+      <span className="text-[10px] font-semibold uppercase tracking-tight px-2 py-0.5 rounded"
+        style={{ backgroundColor: 'rgba(41,104,97,0.12)', color: CI.primary }}>
+        Processed
+      </span>
+    )
+    if (inv.xero_sync_status === 'review') return (
+      <span className="text-[10px] font-semibold uppercase tracking-tight px-2 py-0.5 rounded"
+        style={{ backgroundColor: 'rgba(254,203,142,0.5)', color: CI.secondary }}>
+        GST Review
+      </span>
+    )
+    if (inv.xero_sync_status === 'failed') return (
+      <span className="text-[10px] font-semibold uppercase tracking-tight px-2 py-0.5 rounded bg-red-100 text-red-700">
+        Sync Failed
+      </span>
+    )
+    // pending — show "Verifying" if AI ran, "Pending" otherwise
+    return (
+      <span className="text-[10px] font-semibold uppercase tracking-tight px-2 py-0.5 rounded"
+        style={{ backgroundColor: 'rgba(124,87,37,0.1)', color: CI.secondary }}>
+        {inv.ai_confidence ? 'Verifying' : 'Pending'}
+      </span>
+    )
+  }
+
+  // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
-      {/* Header */}
-      <div className="px-5 pt-12 pb-6">
-        <button onClick={() => router.back()} className="text-[#B8960C] text-sm mb-3 flex items-center gap-1">
-          ← Back
+    <div className="min-h-screen pb-28" style={{ backgroundColor: CI.surface }}>
+
+      {/* Hidden file inputs — always mounted so refs are available everywhere */}
+      <input ref={cameraInputRef}  type="file" accept="image/*"        capture="environment" className="hidden" onChange={handleFileSelect} />
+      <input ref={libraryInputRef} type="file" accept="image/*"        className="hidden"                       onChange={handleFileSelect} />
+      <input ref={pdfInputRef}     type="file" accept="application/pdf" className="hidden"                      onChange={handleFileSelect} />
+
+      <div className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
+
+        {/* ── Back nav ──────────────────────────────────────────────────── */}
+        <button onClick={() => router.back()}
+          className="flex items-center gap-1 text-sm mb-6 transition-opacity hover:opacity-70"
+          style={{ color: CI.primary }}>
+          <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+          Back
         </button>
-        <h1 className="text-2xl font-bold text-[#1A1A1A]">Scan Invoice</h1>
-        <p className="text-sm text-gray-400 mt-1">Xero-ready bill capture</p>
-      </div>
 
-      <div className="px-5 space-y-6">
+        {/* ── Editorial header — always visible ─────────────────────────── */}
+        <section className="mb-8">
+          <h1
+            className="text-5xl font-light leading-tight mb-3"
+            style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
+          >
+            Inventory Intake
+          </h1>
+          <p className="text-base leading-relaxed" style={{ color: CI.tertiary }}>
+            Capture fresh stock receipts or upload digital invoices to keep your artisan stores perfectly balanced.
+          </p>
+        </section>
 
-        {/* ── CAPTURE MODE ── */}
+        {/* ════════════════════════════════════════════════════════════════
+            CAPTURE MODE — Bento action grid
+            ════════════════════════════════════════════════════════════════ */}
         {uiMode === 'capture' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-3">
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
-            <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileSelect} />
+          <div className="space-y-3 mb-10">
 
-            <button onClick={() => cameraInputRef.current?.click()}
-              className="w-full flex items-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-[#B8960C] hover:text-[#B8960C] transition-colors">
-              <span className="text-2xl">📷</span>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Take Photo</p>
-                <p className="text-xs text-gray-400">Open camera to photograph invoice</p>
+            {/* Camera — primary action, full width, gradient */}
+            <button
+              onClick={() => cameraInputRef.current?.click()}
+              className="relative w-full overflow-hidden rounded-2xl p-7 text-left active:scale-[0.98] transition-transform"
+              style={{ background: CI.gradient, boxShadow: '0 24px 48px -12px rgba(28,28,24,0.12)' }}
+            >
+              {/* Icon */}
+              <div className="w-14 h-14 rounded-xl flex items-center justify-center mb-5"
+                style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)' }}>
+                <span className="material-symbols-outlined text-white" style={{ fontSize: '28px', fontVariationSettings: "'FILL' 1" }}>
+                  photo_camera
+                </span>
               </div>
+
+              {/* Text */}
+              <h2
+                className="text-3xl font-light italic text-white mb-1"
+                style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)' }}
+              >
+                Take Photo
+              </h2>
+              <p className="text-white/75 text-sm max-w-xs">
+                Scan physical receipts directly with your camera for instant AI processing.
+              </p>
+
+              {/* CTA row */}
+              <div className="mt-6 flex items-center gap-2 text-white font-medium text-sm">
+                <span>Launch Scanner</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+              </div>
+
+              {/* Decorative blob */}
+              <div className="absolute -right-10 -bottom-10 w-52 h-52 rounded-full"
+                style={{ backgroundColor: 'rgba(255,255,255,0.08)', filter: 'blur(32px)' }} />
             </button>
 
-            <button onClick={() => libraryInputRef.current?.click()}
-              className="w-full flex items-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-[#B8960C] hover:text-[#B8960C] transition-colors">
-              <span className="text-2xl">🖼️</span>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Upload from Library</p>
-                <p className="text-xs text-gray-400">Choose an existing photo</p>
-              </div>
-            </button>
+            {/* Library + PDF — side by side */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => libraryInputRef.current?.click()}
+                className="rounded-2xl p-6 text-left active:scale-[0.98] transition-all"
+                style={{ backgroundColor: CI.surfaceCt }}
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5"
+                  style={{ backgroundColor: 'rgba(41,104,97,0.12)' }}>
+                  <span className="material-symbols-outlined" style={{ color: CI.primary }}>add_photo_alternate</span>
+                </div>
+                <h3
+                  className="text-xl font-normal mb-1"
+                  style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
+                >
+                  Library
+                </h3>
+                <p className="text-xs leading-relaxed" style={{ color: CI.tertiary }}>
+                  Select from your device gallery.
+                </p>
+              </button>
 
-            <button onClick={() => pdfInputRef.current?.click()}
-              className="w-full flex items-center gap-4 p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:border-[#B8960C] hover:text-[#B8960C] transition-colors">
-              <span className="text-2xl">📄</span>
-              <div className="text-left">
-                <p className="font-semibold text-sm">Upload PDF</p>
-                <p className="text-xs text-gray-400">Select a PDF invoice file</p>
-              </div>
-            </button>
-
-            <div className="flex items-center gap-3 pt-1">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 font-medium">OR</span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <button
+                onClick={() => pdfInputRef.current?.click()}
+                className="rounded-2xl p-6 text-left active:scale-[0.98] transition-all"
+                style={{ backgroundColor: CI.surfaceCt }}
+              >
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5"
+                  style={{ backgroundColor: 'rgba(41,104,97,0.12)' }}>
+                  <span className="material-symbols-outlined" style={{ color: CI.primary }}>picture_as_pdf</span>
+                </div>
+                <h3
+                  className="text-xl font-normal mb-1"
+                  style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
+                >
+                  Upload PDF
+                </h3>
+                <p className="text-xs leading-relaxed" style={{ color: CI.tertiary }}>
+                  Import digital supplier invoices.
+                </p>
+              </button>
             </div>
 
-            <button onClick={() => setUiMode('form')}
-              className="w-full text-center text-sm text-[#B8960C] font-medium py-2">
-              Enter manually (no file)
+            {/* Manual entry — full width, outlined */}
+            <button
+              onClick={() => setUiMode('form')}
+              className="w-full rounded-2xl p-5 flex items-center justify-between active:scale-[0.98] transition-all"
+              style={{
+                backgroundColor: CI.surfaceCtLow,
+                border: `1px solid ${CI.outlineVar}30`,
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 rounded-full bg-white flex items-center justify-center shadow-sm">
+                  <span className="material-symbols-outlined" style={{ color: CI.secondary }}>edit_note</span>
+                </div>
+                <div className="text-left">
+                  <h3
+                    className="text-xl font-normal"
+                    style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
+                  >
+                    Enter manually
+                  </h3>
+                  <p className="text-xs" style={{ color: CI.tertiary }}>No document? Log items one by one.</p>
+                </div>
+              </div>
+              <span className="material-symbols-outlined" style={{ color: CI.outlineVar }}>chevron_right</span>
             </button>
           </div>
         )}
 
-        {/* ── CHOOSE MODE ── */}
+        {/* ════════════════════════════════════════════════════════════════
+            CHOOSE MODE — preview + AI extract option
+            ════════════════════════════════════════════════════════════════ */}
         {uiMode === 'choose' && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4 mb-10"
+            style={{ boxShadow: '0 4px 20px rgba(28,28,24,0.06)' }}>
             {photoPreview && !isPdf && (
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photoPreview} alt="Invoice photo" className="w-full h-44 object-cover rounded-xl" />
                 <button onClick={() => { handleRemovePhoto(); setUiMode('capture') }}
-                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
                   × Retake
                 </button>
               </div>
             )}
             {isPdf && photo && (
-              <div className="flex items-center gap-3 bg-red-50 rounded-xl p-4">
-                <span className="text-3xl">📄</span>
+              <div className="flex items-center gap-3 rounded-xl p-4"
+                style={{ backgroundColor: CI.surfaceCt }}>
+                <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '28px' }}>description</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-[#1A1A1A] truncate">{photo.name}</p>
-                  <p className="text-xs text-gray-400">PDF · {(photo.size / 1024).toFixed(0)} KB</p>
+                  <p className="font-semibold text-sm truncate" style={{ color: CI.onSurface }}>{photo.name}</p>
+                  <p className="text-xs" style={{ color: CI.tertiary }}>PDF · {(photo.size / 1024).toFixed(0)} KB</p>
                 </div>
-                <button onClick={() => { handleRemovePhoto(); setUiMode('capture') }} className="text-gray-400 text-sm px-2 py-1">×</button>
+                <button onClick={() => { handleRemovePhoto(); setUiMode('capture') }}
+                  className="text-sm px-2 py-1" style={{ color: CI.tertiary }}>×</button>
               </div>
             )}
-            <p className="text-sm text-gray-500 text-center">Extract invoice details automatically?</p>
+            <p className="text-sm text-center" style={{ color: CI.tertiary }}>
+              Extract invoice details automatically with AI?
+            </p>
             <button onClick={handleExtractWithAI}
-              className="w-full py-4 rounded-full bg-[#B8960C] text-white font-bold text-base flex items-center justify-center gap-2 shadow-md">
-              <span>✨</span><span>Extract with AI</span>
+              className="w-full py-4 rounded-full text-white font-semibold text-base flex items-center justify-center gap-2"
+              style={{ background: CI.gradient, boxShadow: '0 8px 20px rgba(41,104,97,0.25)' }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
+              Extract with AI
             </button>
             <button onClick={() => setUiMode('form')}
-              className="w-full py-3 rounded-full border border-gray-200 text-gray-500 text-sm font-medium">
-              Or fill in manually
+              className="w-full py-3 rounded-full border text-sm font-medium"
+              style={{ borderColor: CI.outlineVar, color: CI.tertiary }}>
+              Fill in manually
             </button>
           </div>
         )}
 
-        {/* ── EXTRACTING MODE ── */}
+        {/* ════════════════════════════════════════════════════════════════
+            EXTRACTING MODE — AI loading state
+            ════════════════════════════════════════════════════════════════ */}
         {uiMode === 'extracting' && (
-          <div className="bg-white rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center gap-4">
-            <div className="w-10 h-10 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
-            <p className="font-semibold text-[#1A1A1A]">Reading invoice with AI…</p>
-            <p className="text-sm text-gray-400 text-center">Extracting supplier, invoice number, dates and line items.</p>
+          <div className="bg-white rounded-2xl p-10 flex flex-col items-center justify-center gap-4 mb-10"
+            style={{ boxShadow: '0 4px 20px rgba(28,28,24,0.06)' }}>
+            <div className="w-12 h-12 border-4 border-t-transparent rounded-full animate-spin"
+              style={{ borderColor: CI.primary }} />
+            <p className="font-semibold" style={{ color: CI.onSurface,
+              fontFamily: 'var(--font-newsreader, Georgia, serif)', fontSize: '1.2rem' }}>
+              Reading invoice…
+            </p>
+            <p className="text-sm text-center" style={{ color: CI.tertiary }}>
+              Matching line items to your Xero inventory and chart of accounts.
+            </p>
           </div>
         )}
 
-        {/* ── FORM MODE ── */}
+        {/* ════════════════════════════════════════════════════════════════
+            FORM MODE — invoice detail entry
+            ════════════════════════════════════════════════════════════════ */}
         {uiMode === 'form' && (
-          <div className="bg-white rounded-2xl p-4 shadow-sm space-y-4">
-            {/* Hidden file inputs for re-capture from form */}
-            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileSelect} />
-            <input ref={libraryInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
-            <input ref={pdfInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileSelect} />
+          <div className="bg-white rounded-2xl p-5 space-y-4 mb-10"
+            style={{ boxShadow: '0 4px 20px rgba(28,28,24,0.06)' }}>
+
+            {/* Re-capture mini buttons (shown when no file attached) */}
+            {!photo && (
+              <div className="flex gap-2">
+                {[
+                  { label: '📷 Camera',  action: () => cameraInputRef.current?.click()  },
+                  { label: '🖼️ Library', action: () => libraryInputRef.current?.click() },
+                  { label: '📄 PDF',     action: () => pdfInputRef.current?.click()     },
+                ].map(btn => (
+                  <button key={btn.label} onClick={btn.action}
+                    className="flex-1 py-2 border border-dashed rounded-xl text-xs transition-colors"
+                    style={{ borderColor: CI.outlineVar, color: CI.tertiary }}>
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Photo preview */}
             {photoPreview && !isPdf && (
@@ -406,181 +567,176 @@ export default function InvoicePage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photoPreview} alt="Invoice photo" className="w-full h-36 object-cover rounded-xl" />
                 <button onClick={handleRemovePhoto}
-                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">× Remove</button>
+                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                  × Remove
+                </button>
               </div>
             )}
             {isPdf && photo && (
-              <div className="flex items-center gap-3 bg-red-50 rounded-xl p-3">
-                <span className="text-2xl">📄</span>
-                <p className="flex-1 text-sm font-medium text-[#1A1A1A] truncate">{photo.name}</p>
-                <button onClick={handleRemovePhoto} className="text-gray-400 text-sm">× Remove</button>
-              </div>
-            )}
-            {!photo && (
-              <div className="flex gap-2">
-                <button onClick={() => cameraInputRef.current?.click()}
-                  className="flex-1 py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-400 hover:border-[#B8960C] hover:text-[#B8960C] transition-colors">
-                  📷 Camera
-                </button>
-                <button onClick={() => libraryInputRef.current?.click()}
-                  className="flex-1 py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-400 hover:border-[#B8960C] hover:text-[#B8960C] transition-colors">
-                  🖼️ Library
-                </button>
-                <button onClick={() => pdfInputRef.current?.click()}
-                  className="flex-1 py-2 border border-dashed border-gray-300 rounded-xl text-xs text-gray-400 hover:border-[#B8960C] hover:text-[#B8960C] transition-colors">
-                  📄 PDF
-                </button>
+              <div className="flex items-center gap-3 rounded-xl p-3" style={{ backgroundColor: CI.surfaceCt }}>
+                <span className="material-symbols-outlined" style={{ color: CI.primary }}>description</span>
+                <p className="flex-1 text-sm font-medium truncate" style={{ color: CI.onSurface }}>{photo.name}</p>
+                <button onClick={handleRemovePhoto} className="text-sm" style={{ color: CI.tertiary }}>× Remove</button>
               </div>
             )}
 
             {/* AI confidence badge */}
             {aiConfidence && (
               <div className={`flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium ${
-                aiConfidence === 'high' ? 'bg-green-50 text-[#16A34A]'
-                : aiConfidence === 'medium' ? 'bg-amber-50 text-[#D97706]'
-                : 'bg-red-50 text-[#DC2626]'
+                aiConfidence === 'high'   ? 'bg-green-50 text-green-700'
+                : aiConfidence === 'medium' ? 'bg-amber-50 text-amber-700'
+                : 'bg-red-50 text-red-700'
               }`}>
-                <span>✨</span>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px', fontVariationSettings: "'FILL' 1" }}>auto_awesome</span>
                 <span>
-                  {aiConfidence === 'high' && 'AI extracted · High confidence'}
+                  {aiConfidence === 'high'   && 'AI extracted · High confidence'}
                   {aiConfidence === 'medium' && 'AI extracted · Medium confidence — please verify'}
-                  {aiConfidence === 'low' && 'AI extracted · Low confidence — verify carefully'}
+                  {aiConfidence === 'low'    && 'AI extracted · Low confidence — verify carefully'}
                 </span>
               </div>
             )}
 
-            {/* GST flagged warning — shown when AI cannot determine GST treatment.
-                This invoice will be saved as xero_sync_status='review' and
-                excluded from the 3 PM Xero batch until resolved. */}
+            {/* GST flagged warning */}
             {gstFlagged && (
-              <div className="flex items-start gap-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
-                <span className="text-amber-500 text-xl shrink-0 mt-0.5">⚠️</span>
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl"
+                style={{ backgroundColor: 'rgba(254,203,142,0.3)', border: '1px solid rgba(124,87,37,0.2)' }}>
+                <span className="material-symbols-outlined shrink-0 mt-0.5" style={{ color: CI.secondary, fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>
+                  warning
+                </span>
                 <div>
-                  <p className="text-sm font-semibold text-amber-700">GST type unclear — flagged for review</p>
-                  <p className="text-xs text-amber-600 mt-0.5 leading-relaxed">
-                    This invoice will be saved but held back from Xero sync. Ask your manager to set the correct GST treatment before end of day.
+                  <p className="text-sm font-semibold" style={{ color: CI.secondary }}>
+                    GST type unclear — flagged for review
+                  </p>
+                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: CI.secondary, opacity: 0.8 }}>
+                    This invoice will be held back from Xero sync. Ask your manager to set the correct GST treatment before end of day.
                   </p>
                 </div>
               </div>
             )}
 
-            <h2 className="font-semibold text-[#1A1A1A]">Invoice Details</h2>
+            <h2 className="font-semibold" style={{ color: CI.onSurface,
+              fontFamily: 'var(--font-newsreader, Georgia, serif)', fontSize: '1.15rem' }}>
+              Invoice Details
+            </h2>
 
-            {/* Supplier Name */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Supplier Name <span className="text-[#DC2626]">*</span></label>
-              <input type="text" value={supplierName} onChange={e => setSupplierName(e.target.value)}
-                placeholder="e.g. Fresh Foods Co."
-                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-            </div>
+            {/* ── Form fields ── */}
+            {[
+              { label: 'Supplier Name', required: true,  type: 'text',  value: supplierName,   onChange: (v: string) => setSupplierName(v),   placeholder: 'e.g. Fresh Foods Co.'       },
+              { label: 'Supplier Email', required: false, type: 'email', value: supplierEmail,  onChange: (v: string) => setSupplierEmail(v),  placeholder: 'billing@supplier.com.au'    },
+              { label: 'Invoice Number', required: true,  type: 'text',  value: invoiceNumber,  onChange: (v: string) => setInvoiceNumber(v),  placeholder: 'e.g. INV-00123'             },
+            ].map(f => (
+              <div key={f.label} className="flex flex-col gap-1">
+                <label className="text-sm font-medium" style={{ color: CI.onSurface }}>
+                  {f.label} {f.required && <span className="text-red-500">*</span>}
+                  {!f.required && <span className="font-normal" style={{ color: CI.tertiary }}> (optional)</span>}
+                </label>
+                <input type={f.type} value={f.value} onChange={e => f.onChange(e.target.value)}
+                  placeholder={f.placeholder}
+                  className="px-4 py-3 rounded-xl border text-base focus:outline-none focus:ring-2"
+                  style={{
+                    borderColor: CI.outlineVar,
+                    backgroundColor: CI.surfaceCtLow,
+                    color: CI.onSurface,
+                  }}
+                />
+              </div>
+            ))}
 
-            {/* Supplier Email */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Supplier Email <span className="text-gray-400 font-normal">(optional)</span></label>
-              <input type="email" value={supplierEmail} onChange={e => setSupplierEmail(e.target.value)}
-                placeholder="billing@supplier.com.au"
-                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-            </div>
-
-            {/* Invoice Number */}
-            <div className="flex flex-col gap-1">
-              <label className="text-sm font-medium text-gray-700">Invoice Number <span className="text-[#DC2626]">*</span></label>
-              <input type="text" value={invoiceNumber} onChange={e => setInvoiceNumber(e.target.value)}
-                placeholder="e.g. INV-00123"
-                className="px-4 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-base focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-            </div>
-
-            {/* Invoice Date & Due Date side by side */}
+            {/* Date fields */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Invoice Date <span className="text-[#DC2626]">*</span></label>
-                <input type="date" value={invoiceDate} onChange={e => setInvoiceDate(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-              </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Due Date <span className="text-[#DC2626]">*</span></label>
-                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
-                  className="px-3 py-3 rounded-xl border border-gray-200 bg-[#FAF8F3] text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-              </div>
+              {[
+                { label: 'Invoice Date', value: invoiceDate, onChange: setInvoiceDate },
+                { label: 'Due Date',     value: dueDate,     onChange: setDueDate     },
+              ].map(f => (
+                <div key={f.label} className="flex flex-col gap-1">
+                  <label className="text-sm font-medium" style={{ color: CI.onSurface }}>
+                    {f.label} <span className="text-red-500">*</span>
+                  </label>
+                  <input type="date" value={f.value} onChange={e => f.onChange(e.target.value)}
+                    className="px-3 py-3 rounded-xl border text-sm focus:outline-none focus:ring-2"
+                    style={{ borderColor: CI.outlineVar, backgroundColor: CI.surfaceCtLow, color: CI.onSurface }} />
+                </div>
+              ))}
             </div>
             {invoiceDate && dueDate && (
-              <p className="text-xs text-gray-400 -mt-2">Due date auto-set to 30 days — adjust if needed</p>
+              <p className="text-xs -mt-2" style={{ color: CI.tertiary }}>
+                Due date auto-set to 30 days — adjust if needed
+              </p>
             )}
 
-            {/* Line Items */}
+            {/* Line items */}
             <div>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-semibold tracking-widest uppercase text-gray-400">
-                  Line Items <span className="text-[#DC2626]">*</span>
+                <p className="section-label">
+                  Line Items <span className="text-red-500">*</span>
                 </p>
                 <button onClick={addLineItem}
-                  className="w-7 h-7 rounded-full bg-[#B8960C] text-white text-lg flex items-center justify-center leading-none">
+                  className="w-7 h-7 rounded-full text-white text-lg flex items-center justify-center leading-none"
+                  style={{ backgroundColor: CI.primary }}>
                   +
                 </button>
               </div>
 
               <div className="space-y-3">
                 {lineItems.map((item, index) => (
-                  <div key={index} className="bg-[#FAF8F3] rounded-xl p-3 space-y-2">
-
-                    {/* Row 1: Description + remove button */}
+                  <div key={index} className="rounded-xl p-3 space-y-2" style={{ backgroundColor: CI.surfaceCtLow }}>
                     <div className="flex items-center gap-2">
                       <input type="text" value={item.description}
                         onChange={e => updateLineItem(index, 'description', e.target.value)}
                         placeholder="Description"
-                        className="flex-1 px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
+                        className="flex-1 px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2"
+                        style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
                       <button onClick={() => removeLineItem(index)}
-                        className="w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-sm flex items-center justify-center shrink-0">×</button>
+                        className="w-7 h-7 rounded-full bg-gray-200 text-gray-500 text-sm flex items-center justify-center shrink-0">
+                        ×
+                      </button>
                     </div>
 
-                    {/* Row 2: Qty | Unit Amount (ex-GST) | Total (calculated) */}
                     <div className="grid grid-cols-3 gap-2">
+                      {[
+                        { label: 'Qty',          value: item.quantity,    onChange: (v: number) => updateLineItem(index, 'quantity', v),    step: '1',    min: '0' },
+                        { label: 'Unit (ex-GST)', value: item.unit_amount, onChange: (v: number) => updateLineItem(index, 'unit_amount', v), step: '0.01', min: '0' },
+                      ].map(f => (
+                        <div key={f.label} className="flex flex-col gap-0.5">
+                          <label className="text-xs" style={{ color: CI.tertiary }}>{f.label}</label>
+                          <input type="number" step={f.step} min={f.min} value={f.value}
+                            onChange={e => f.onChange(parseFloat(e.target.value) || 0)}
+                            className="px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
+                        </div>
+                      ))}
                       <div className="flex flex-col gap-0.5">
-                        <label className="text-xs text-gray-400">Qty</label>
-                        <input type="number" step="1" min="0" value={item.quantity}
-                          onChange={e => updateLineItem(index, 'quantity', parseFloat(e.target.value) || 0)}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <label className="text-xs text-gray-400">Unit (ex-GST)</label>
-                        <input type="number" step="0.01" min="0" value={item.unit_amount}
-                          onChange={e => updateLineItem(index, 'unit_amount', parseFloat(e.target.value) || 0)}
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <label className="text-xs text-gray-400">Line Total</label>
-                        <div className="px-3 py-2 rounded-lg border border-gray-100 bg-gray-50 text-sm text-gray-600 font-medium">
+                        <label className="text-xs" style={{ color: CI.tertiary }}>Line Total</label>
+                        <div className="px-3 py-2 rounded-lg border text-sm font-medium"
+                          style={{ borderColor: CI.outlineVar, backgroundColor: CI.surfaceCt, color: CI.primary }}>
                           {formatCurrency(item.quantity * item.unit_amount)}
                         </div>
                       </div>
                     </div>
 
-                    {/* Row 3: Account Code | Inventory Item Code */}
                     <div className="grid grid-cols-2 gap-2">
-                      <div className="flex flex-col gap-0.5">
-                        <label className="text-xs text-gray-400">Account Code</label>
-                        <input type="text" value={item.account_code}
-                          onChange={e => updateLineItem(index, 'account_code', e.target.value)}
-                          placeholder="300"
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-                      </div>
-                      <div className="flex flex-col gap-0.5">
-                        <label className="text-xs text-gray-400">Item Code <span className="font-normal">(opt)</span></label>
-                        <input type="text" value={item.inventory_item_code}
-                          onChange={e => updateLineItem(index, 'inventory_item_code', e.target.value)}
-                          placeholder="SKU or blank"
-                          className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#B8960C]" />
-                      </div>
+                      {[
+                        { label: 'Account Code', value: item.account_code,        onChange: (v: string) => updateLineItem(index, 'account_code', v),        placeholder: '310'         },
+                        { label: 'Item Code (opt)', value: item.inventory_item_code, onChange: (v: string) => updateLineItem(index, 'inventory_item_code', v), placeholder: 'SKU or blank' },
+                      ].map(f => (
+                        <div key={f.label} className="flex flex-col gap-0.5">
+                          <label className="text-xs" style={{ color: CI.tertiary }}>{f.label}</label>
+                          <input type="text" value={f.value} onChange={e => f.onChange(e.target.value)}
+                            placeholder={f.placeholder}
+                            className="px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2"
+                            style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Invoice total calculated from line items */}
               {lineItems.length > 0 && (
-                <div className="flex items-center justify-between pt-3 mt-2 border-t border-gray-100">
-                  <span className="text-sm font-medium text-gray-600">Invoice Total (ex-GST)</span>
-                  <span className="text-xl font-bold text-[#1A1A1A]">
+                <div className="flex items-center justify-between pt-3 mt-2 border-t" style={{ borderColor: CI.outlineVar + '40' }}>
+                  <span className="text-sm font-medium" style={{ color: CI.tertiary }}>Invoice Total (ex-GST)</span>
+                  <span className="text-xl font-bold"
+                    style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}>
                     {formatCurrency(lineItems.reduce((s, i) => s + i.quantity * i.unit_amount, 0))}
                   </span>
                 </div>
@@ -590,115 +746,99 @@ export default function InvoicePage() {
             {/* Action buttons */}
             <div className="flex gap-3 pt-2">
               <button onClick={resetForm}
-                className="flex-1 py-3 rounded-full border border-gray-200 text-gray-600 text-sm font-medium">
+                className="flex-1 py-3 rounded-full border text-sm font-medium"
+                style={{ borderColor: CI.outlineVar, color: CI.tertiary }}>
                 Cancel
               </button>
               <button onClick={handleSubmit} disabled={submitting}
-                className="flex-1 py-3 rounded-full bg-[#B8960C] text-white font-semibold disabled:opacity-40">
+                className="flex-1 py-3 rounded-full text-white font-semibold disabled:opacity-40 transition-opacity"
+                style={{ background: CI.gradient }}>
                 {submitting ? 'Saving…' : 'Save Invoice'}
               </button>
             </div>
           </div>
         )}
 
-        {/* ── TODAY'S INVOICES ── */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="section-label">
+        {/* ════════════════════════════════════════════════════════════════
+            TODAY'S INVOICES
+            ════════════════════════════════════════════════════════════════ */}
+        <section>
+          <div className="flex items-baseline justify-between mb-6">
+            <h2
+              className="text-3xl font-light italic"
+              style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
+            >
               Today&apos;s Invoices
-              {todayInvoices.length > 0 && (
-                <span className="ml-1 font-normal normal-case text-gray-400">({todayInvoices.length})</span>
-              )}
-            </p>
+            </h2>
+            {todayInvoices.length > 0 && (
+              <span className="section-label">
+                {formatCurrency(todayTotal)} total
+              </span>
+            )}
           </div>
 
-          {todayInvoices.length > 0 && (
-            <div className="bg-white rounded-2xl p-4 shadow-sm mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-600">Today&apos;s Total (ex-GST)</span>
-              <span className="text-xl font-bold text-[#1A1A1A]">{formatCurrency(todayTotal)}</span>
-            </div>
-          )}
-
           {loadingInvoices ? (
-            <div className="flex justify-center py-6">
-              <div className="w-6 h-6 border-4 border-[#B8960C] border-t-transparent rounded-full animate-spin" />
+            <div className="flex justify-center py-10">
+              <div className="w-6 h-6 border-4 border-t-transparent rounded-full animate-spin"
+                style={{ borderColor: CI.primary }} />
             </div>
           ) : todayInvoices.length === 0 ? (
-            <div className="bg-white rounded-2xl p-5 shadow-sm text-center">
-              <p className="text-gray-400 text-sm">No invoices scanned today</p>
+            <div className="rounded-2xl p-8 text-center" style={{ backgroundColor: CI.surfaceCtLow }}>
+              <span className="material-symbols-outlined mb-3 block" style={{ color: CI.outlineVar, fontSize: '36px' }}>
+                receipt_long
+              </span>
+              <p className="text-sm" style={{ color: CI.tertiary }}>No invoices scanned today</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {todayInvoices.map(invoice => (
-                <div key={invoice.id} className="bg-white rounded-2xl p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-[#1A1A1A] truncate">{invoice.supplier_name}</p>
-
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {invoice.reference_number && `#${invoice.reference_number}`}
-                        {invoice.reference_number && invoice.invoice_date && ' · '}
-                        {invoice.invoice_date && formatDisplayDate(invoice.invoice_date)}
-                        {invoice.due_date && ` · Due ${formatDisplayDate(invoice.due_date)}`}
-                      </p>
-
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        <span className="text-lg font-bold text-[#1A1A1A]">{formatCurrency(invoice.total_amount)}</span>
-                        <span className="text-xs text-gray-400">ex-GST</span>
-
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          invoice.status === 'submitted' ? 'bg-green-100 text-[#16A34A]' : 'bg-amber-100 text-[#D97706]'
-                        }`}>
-                          {invoice.status === 'submitted' ? 'Submitted' : 'Pending'}
-                        </span>
-
-                        {/* Xero sync status badge */}
-                        {invoice.xero_sync_status === 'synced' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-50 text-[#16A34A]">
-                            ✓ Xero
-                          </span>
+                <div key={invoice.id}
+                  className="rounded-xl p-4 flex items-center justify-between transition-colors"
+                  style={{ backgroundColor: CI.surfaceCtLow }}
+                >
+                  {/* Thumbnail */}
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 flex items-center justify-center"
+                      style={{ backgroundColor: CI.surfaceCtHigh }}>
+                      {invoice.photo_url
+                        ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={invoice.photo_url} alt="Invoice" className="w-full h-full object-cover opacity-70" />
+                        ) : (
+                          <span className="material-symbols-outlined" style={{ color: CI.outlineVar }}>description</span>
                         )}
-                        {invoice.xero_sync_status === 'failed' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-red-50 text-[#DC2626]">
-                            Xero failed
-                          </span>
-                        )}
-                        {invoice.xero_sync_status === 'review' && (
-                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-[#D97706]">
-                            ⚠️ GST review
-                          </span>
-                        )}
-
-                        {invoice.ai_confidence && (
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                            invoice.ai_confidence === 'high' ? 'bg-green-50 text-[#16A34A]'
-                            : invoice.ai_confidence === 'medium' ? 'bg-amber-50 text-[#D97706]'
-                            : 'bg-red-50 text-[#DC2626]'
-                          }`}>
-                            AI · {invoice.ai_confidence}
-                          </span>
-                        )}
-
-                        {invoice.line_items?.length > 0 && (
-                          <span className="text-xs text-gray-400">
-                            {invoice.line_items.length} line item{invoice.line_items.length !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-gray-400 mt-1">{formatTime(invoice.created_at)}</p>
                     </div>
 
-                    {invoice.photo_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={invoice.photo_url} alt="Invoice" className="w-12 h-12 object-cover rounded-lg shrink-0" />
-                    )}
+                    {/* Meta */}
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate" style={{ color: CI.onSurface }}>
+                        {invoice.supplier_name}
+                      </p>
+                      <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: CI.tertiary }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: '13px' }}>schedule</span>
+                        {formatTime(invoice.created_at)}
+                        {invoice.reference_number && ` · #${invoice.reference_number}`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Amount + badge */}
+                  <div className="text-right shrink-0 ml-3">
+                    <p
+                      className="text-lg font-medium"
+                      style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.primary }}
+                    >
+                      {formatCurrency(invoice.total_amount)}
+                    </p>
+                    <div className="mt-0.5">
+                      <XeroBadge inv={invoice} />
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+        </section>
 
       </div>
     </div>
