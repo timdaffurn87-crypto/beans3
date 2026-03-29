@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useRole } from '@/hooks/useRole'
 import { createClient } from '@/lib/supabase'
 import { getCurrentCafeDay } from '@/lib/cafe-day'
 import { formatCurrency, formatTime, formatDisplayDate } from '@/lib/utils'
@@ -54,8 +55,10 @@ const CI = {
 /** Invoice Scanning page — all roles */
 export default function InvoicePage() {
   const { profile, loading } = useAuth()
+  const { isManager, isOwner } = useRole()
   const router = useRouter()
   const { showToast } = useToast()
+  const canSyncXero = isManager || isOwner
   const cameraInputRef  = useRef<HTMLInputElement>(null)
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef     = useRef<HTMLInputElement>(null)
@@ -92,6 +95,7 @@ export default function InvoicePage() {
   }, [invoiceDate])
 
   const [submitting, setSubmitting]         = useState(false)
+  const [xeroSyncing, setXeroSyncing]       = useState(false)
   const [todayInvoices, setTodayInvoices]   = useState<Invoice[]>([])
   const [loadingInvoices, setLoadingInvoices] = useState(true)
 
@@ -332,6 +336,37 @@ export default function InvoicePage() {
       showToast(err instanceof Error ? err.message : 'Something went wrong', 'error')
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  /**
+   * Manually triggers the Xero invoice sync for today's pending invoices.
+   * Calls the server-side /api/xero/sync route which invokes the edge function.
+   */
+  async function handleXeroSync() {
+    setXeroSyncing(true)
+    try {
+      const res  = await fetch('/api/xero/sync', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        showToast(data.error ?? 'Xero sync failed', 'error')
+        return
+      }
+      const { synced = 0, failed = 0, skipped = 0 } = data
+      if (synced === 0 && failed === 0) {
+        showToast(skipped > 0 ? `${skipped} invoice(s) need GST review` : 'No pending invoices to sync', 'error')
+      } else {
+        showToast(
+          `Synced ${synced} to Xero${failed > 0 ? ` · ${failed} failed` : ''}`,
+          failed > 0 ? 'error' : 'success'
+        )
+      }
+      // Refresh the invoice list to show updated sync statuses
+      fetchTodayInvoices()
+    } catch {
+      showToast('Xero sync failed — check your connection', 'error')
+    } finally {
+      setXeroSyncing(false)
     }
   }
 
@@ -852,17 +887,39 @@ export default function InvoicePage() {
             TODAY'S INVOICES
             ════════════════════════════════════════════════════════════════ */}
         <section>
-          <div className="flex items-baseline justify-between mb-6">
-            <h2
-              className="text-3xl font-light italic"
-              style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
-            >
-              Today&apos;s Invoices
-            </h2>
-            {todayInvoices.length > 0 && (
-              <span className="section-label">
-                {formatCurrency(todayTotal)} total
-              </span>
+          <div className="flex items-end justify-between mb-6 gap-3">
+            <div>
+              <h2
+                className="text-3xl font-light italic"
+                style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}
+              >
+                Today&apos;s Invoices
+              </h2>
+              {todayInvoices.length > 0 && (
+                <span className="section-label">{formatCurrency(todayTotal)} total</span>
+              )}
+            </div>
+
+            {/* Push to Xero — manager/owner only, shown when there are invoices */}
+            {canSyncXero && todayInvoices.length > 0 && (
+              <button
+                onClick={handleXeroSync}
+                disabled={xeroSyncing}
+                className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-white disabled:opacity-50 transition-opacity"
+                style={{ background: CI.gradient }}
+              >
+                {xeroSyncing ? (
+                  <>
+                    <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Syncing…
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }}>sync</span>
+                    Push to Xero
+                  </>
+                )}
+              </button>
             )}
           </div>
 
