@@ -298,36 +298,6 @@ function OwnerDashboard({
           </p>
         </div>
 
-        {/* ── Active Staff ── */}
-        <div>
-          <div className="flex items-baseline justify-between mb-3">
-            <h2 className="text-2xl font-bold" style={{ color: '#2D2D2D' }}>
-              Your{' '}
-              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Team</span>
-            </h2>
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full" style={{ backgroundColor: '#E6F4F1', color: '#296861' }}>
-              {data.staffProfiles.length} staff
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            {data.staffProfiles.slice(0, 5).map(s => (
-              <div key={s.id} className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3 card-interactive">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                  style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
-                >
-                  {initials(s.full_name)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
-                  <p className="text-xs" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* ── Operations Status ── */}
         <div className="bg-white rounded-2xl p-4 card-interactive">
           <div className="flex items-baseline justify-between mb-3">
@@ -416,32 +386,22 @@ function OwnerDashboard({
           </Link>
         </div>
 
-        {/* ── Inventory Alert (teal image card) ── */}
-        <div
-          className="rounded-2xl overflow-hidden p-5 card-interactive"
-          style={{ background: 'linear-gradient(135deg, #1a4a45 0%, #0d2d29 100%)' }}
-        >
-          <p className="section-label text-white/50 mb-2">Inventory Alert</p>
-          <p className="text-lg font-bold text-white leading-snug" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>
-            Check supply levels before close.
-          </p>
-          <p className="text-sm text-white/60 mt-1">Reorder suggested by Tuesday.</p>
-          <Link href="/admin/menu" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-white/80">
-            View Menu Items <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
-          </Link>
-        </div>
-
         {/* ── Management links ── */}
         <div className="grid grid-cols-2 gap-3 pb-2">
-          <Link href="/admin/settings" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
-            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>manage_accounts</span>
-            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>Settings</p>
-            <p className="text-xs text-gray-400">Staff & config</p>
+          <Link href="/invoice" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>receipt_long</span>
+            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>Scan Invoice</p>
+            <p className="text-xs text-gray-400">Inventory intake</p>
           </Link>
           <Link href="/eod" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
             <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>nights_stay</span>
             <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>End of Day</p>
             <p className="text-xs text-gray-400">Close the shift</p>
+          </Link>
+          <Link href="/admin/settings" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive col-span-2">
+            <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '22px' }}>manage_accounts</span>
+            <p className="font-semibold text-sm mt-1" style={{ color: '#2D2D2D' }}>Settings</p>
+            <p className="text-xs text-gray-400">Staff & configuration</p>
           </Link>
         </div>
 
@@ -591,34 +551,6 @@ function ManagerDashboard({
           <Link href="/waste" className="text-sm font-semibold" style={{ color: '#296861' }}>Log →</Link>
         </div>
 
-        {/* ── Team ── */}
-        <div>
-          <h2 className="text-2xl font-bold mb-3" style={{ color: '#2D2D2D' }}>
-            Your{' '}
-            <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Team</span>
-          </h2>
-          {data.staffProfiles.length > 0 ? (
-            <div className="flex flex-wrap gap-3">
-              {data.staffProfiles.slice(0, 6).map(s => (
-                <div key={s.id} className="flex items-center gap-2 bg-white rounded-2xl px-3 py-2 card-interactive">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                    style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
-                  >
-                    {initials(s.full_name)}
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold leading-tight" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
-                    <p className="text-[10px]" style={{ color: '#73b0a8' }}>{roleLabel(s.role)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-400">No staff data available</p>
-          )}
-        </div>
-
         {/* ── Admin links ── */}
         <div className="grid grid-cols-2 gap-3 pb-2">
           <Link href="/results" className="bg-white rounded-2xl p-4 flex flex-col gap-1 card-interactive">
@@ -705,16 +637,17 @@ function StaffDashboard({
         <CalibrationCard />
 
         {/* ── Quick action cards ── */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           {[
-            { href: '/calibration', icon: 'tune', label: 'Calibrate' },
-            { href: '/waste',       icon: 'delete', label: 'Log Waste' },
-            { href: '/invoice',     icon: 'receipt_long', label: 'Invoice' },
+            { href: '/calibration', icon: 'tune',         label: 'Calibrate' },
+            { href: '/waste',       icon: 'delete',        label: 'Log Waste' },
+            { href: '/invoice',     icon: 'receipt_long',  label: 'Scan Invoice' },
+            { href: '/eod',         icon: 'nights_stay',   label: 'End of Day' },
           ].map(item => (
             <Link
               key={item.href}
               href={item.href}
-              className="bg-white rounded-2xl p-3 flex flex-col items-center gap-2 card-interactive"
+              className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card-interactive"
             >
               <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '24px' }}>{item.icon}</span>
               <p className="text-[11px] font-semibold text-center text-gray-500">{item.label}</p>

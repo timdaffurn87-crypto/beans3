@@ -143,51 +143,51 @@ function parseModelJson(text: string): Record<string, unknown> | null {
 
 // ─── AI extraction functions ─────────────────────────────────────────────────
 
+/** One image/document payload item for Claude */
+type ImageInput = { base64: string; mediaType: string }
+
 /**
  * Calls Claude (Anthropic) for invoice extraction.
- * Uses the provided prompt which includes all reference data.
+ * Accepts one or more images/PDFs — multi-page invoices are sent as multiple
+ * image blocks in a single message so Claude can synthesise all pages.
  * Throws an error with a descriptive message if the call fails.
  */
 async function extractWithClaude(
   apiKey: string,
-  imageBase64: string,
-  mediaType: string,
+  images: ImageInput[],
   prompt: string
 ): Promise<Record<string, unknown>> {
   const anthropic = new Anthropic({ apiKey })
-  const isPdf = mediaType === 'application/pdf'
+
+  // Build content blocks: one block per image/PDF, then the instruction text
+  type ContentBlock =
+    | { type: 'image'; source: { type: 'base64'; media_type: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'; data: string } }
+    | { type: 'document'; source: { type: 'base64'; media_type: 'application/pdf'; data: string } }
+    | { type: 'text'; text: string }
+
+  const contentBlocks: ContentBlock[] = images.map(({ base64, mediaType }) => {
+    if (mediaType === 'application/pdf') {
+      return {
+        type: 'document' as const,
+        source: { type: 'base64' as const, media_type: 'application/pdf' as const, data: base64 },
+      }
+    }
+    return {
+      type: 'image' as const,
+      source: {
+        type: 'base64' as const,
+        media_type: (mediaType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
+        data: base64,
+      },
+    }
+  })
+
+  contentBlocks.push({ type: 'text' as const, text: prompt })
 
   const message = await anthropic.messages.create({
     model: 'claude-opus-4-6',
     max_tokens: 2048,
-    messages: [
-      {
-        role: 'user',
-        content: isPdf
-          ? [
-              {
-                type: 'document' as const,
-                source: {
-                  type: 'base64' as const,
-                  media_type: 'application/pdf' as const,
-                  data: imageBase64,
-                },
-              },
-              { type: 'text' as const, text: prompt },
-            ]
-          : [
-              {
-                type: 'image' as const,
-                source: {
-                  type: 'base64' as const,
-                  media_type: (mediaType || 'image/jpeg') as 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp',
-                  data: imageBase64,
-                },
-              },
-              { type: 'text' as const, text: prompt },
-            ],
-      },
-    ],
+    messages: [{ role: 'user', content: contentBlocks }],
   })
 
   const content = message.content[0]
@@ -202,26 +202,25 @@ async function extractWithClaude(
 /**
  * Calls Gemini (Google) for invoice extraction.
  * Uses gemini-2.0-flash via the REST API — no additional SDK required.
+ * Accepts one or more images; all are sent as inline_data parts in one request.
  * Throws an error with a descriptive message if the call fails.
  */
 async function extractWithGemini(
   apiKey: string,
-  imageBase64: string,
-  mediaType: string,
+  images: ImageInput[],
   prompt: string
 ): Promise<Record<string, unknown>> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`
+
+  const imageParts = images.map(({ base64, mediaType }) => ({
+    inline_data: { mime_type: mediaType || 'image/jpeg', data: base64 },
+  }))
 
   const body = {
     contents: [
       {
         parts: [
-          {
-            inline_data: {
-              mime_type: mediaType || 'image/jpeg',
-              data: imageBase64,
-            },
-          },
+          ...imageParts,
           { text: prompt },
         ],
       },
@@ -286,7 +285,7 @@ function isGstInclusiveSupplier(
 /**
  * POST /api/ai-extract-invoice
  *
- * Body: { imageBase64: string, mediaType: string }
+ * Body: { images: [{base64, mediaType}][] } — or legacy { imageBase64, mediaType }
  *
  * 1. Authenticates the caller via Supabase session
  * 2. Loads Claude/Gemini API keys from the settings table
@@ -349,8 +348,15 @@ export async function POST(request: Request) {
     )
   }
 
-  const { imageBase64, mediaType } = await request.json()
-  if (!imageBase64) {
+  const body = await request.json()
+
+  // Accept either the new `images` array or the legacy single `imageBase64` field
+  let images: ImageInput[]
+  if (Array.isArray(body.images) && body.images.length > 0) {
+    images = body.images as ImageInput[]
+  } else if (body.imageBase64) {
+    images = [{ base64: body.imageBase64, mediaType: body.mediaType || 'image/jpeg' }]
+  } else {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
@@ -362,13 +368,13 @@ export async function POST(request: Request) {
   // Try Claude first, fall back to Gemini if Claude is unavailable or fails
   if (claudeKey) {
     try {
-      result = await extractWithClaude(claudeKey, imageBase64, mediaType, prompt)
+      result = await extractWithClaude(claudeKey, images, prompt)
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (geminiKey) {
         console.warn(`Claude extraction failed, falling back to Gemini: ${msg}`)
         try {
-          result = await extractWithGemini(geminiKey, imageBase64, mediaType, prompt)
+          result = await extractWithGemini(geminiKey, images, prompt)
           result = { ...result, _provider: 'gemini' }
         } catch (geminiErr) {
           const geminiMsg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr)
@@ -381,7 +387,7 @@ export async function POST(request: Request) {
   } else {
     // No Claude key — go straight to Gemini
     try {
-      result = await extractWithGemini(geminiKey, imageBase64, mediaType, prompt)
+      result = await extractWithGemini(geminiKey, images, prompt)
       result = { ...result, _provider: 'gemini' }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)

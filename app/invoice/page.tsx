@@ -60,10 +60,11 @@ export default function InvoicePage() {
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef     = useRef<HTMLInputElement>(null)
 
-  // File state
-  const [photo, setPhoto]               = useState<File | null>(null)
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
-  const [isPdf, setIsPdf]               = useState(false)
+  // File state — supports multiple photos for multi-page invoices
+  const [photos, setPhotos]               = useState<File[]>([])
+  const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
+  // Derived: true when the single attached file is a PDF (PDFs can't be multi-paged here)
+  const isPdf = photos.length > 0 && photos[0].type === 'application/pdf'
 
   // UI mode: capture → choose → extracting → form
   const [uiMode, setUiMode] = useState<'capture' | 'choose' | 'extracting' | 'form'>('capture')
@@ -114,42 +115,72 @@ export default function InvoicePage() {
     if (profile) fetchTodayInvoices()
   }, [profile])
 
-  /** Handle file selection from any input */
+  /** Handle file selection — appends images, or replaces when a PDF is chosen */
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
+
     const pdf = file.type === 'application/pdf'
-    setIsPdf(pdf)
-    setPhoto(file)
-    setPhotoPreview(pdf ? null : URL.createObjectURL(file))
+
+    if (pdf) {
+      // PDFs replace everything (they are already multi-page)
+      photoPreviews.forEach(url => url && URL.revokeObjectURL(url))
+      setPhotos([file])
+      setPhotoPreviews([''])
+    } else {
+      // Images append to the list (don't append if a PDF is already loaded)
+      if (isPdf) {
+        photoPreviews.forEach(url => url && URL.revokeObjectURL(url))
+        setPhotos([file])
+        setPhotoPreviews([URL.createObjectURL(file)])
+      } else {
+        setPhotos(prev => [...prev, file])
+        setPhotoPreviews(prev => [...prev, URL.createObjectURL(file)])
+      }
+    }
+
     setUiMode('choose')
     if (cameraInputRef.current)  cameraInputRef.current.value  = ''
     if (libraryInputRef.current) libraryInputRef.current.value = ''
     if (pdfInputRef.current)     pdfInputRef.current.value     = ''
   }
 
-  function handleRemovePhoto() {
-    if (photoPreview) URL.revokeObjectURL(photoPreview)
-    setPhoto(null)
-    setPhotoPreview(null)
-    setIsPdf(false)
+  /** Remove a single photo by index */
+  function handleRemovePhoto(index: number) {
+    const url = photoPreviews[index]
+    if (url) URL.revokeObjectURL(url)
+    setPhotos(prev => prev.filter((_, i) => i !== index))
+    setPhotoPreviews(prev => prev.filter((_, i) => i !== index))
+  }
+
+  /** Clear all photos */
+  function handleClearAllPhotos() {
+    photoPreviews.forEach(url => url && URL.revokeObjectURL(url))
+    setPhotos([])
+    setPhotoPreviews([])
   }
 
   /**
-   * Sends the captured file to the AI extraction API.
+   * Sends all captured photos to the AI extraction API.
    * Pre-fills the form on success; falls through to blank manual entry on failure.
    */
   async function handleExtractWithAI() {
-    if (!photo) return
+    if (photos.length === 0) return
     setUiMode('extracting')
 
     try {
-      const base64   = await fileToBase64(photo)
+      // Convert all files to base64 in parallel
+      const images = await Promise.all(
+        photos.map(async (file) => ({
+          base64: await fileToBase64(file),
+          mediaType: file.type,
+        }))
+      )
+
       const response = await fetch('/api/ai-extract-invoice', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: base64, mediaType: photo.type }),
+        body: JSON.stringify({ images }),
       })
       const data = await response.json()
 
@@ -209,7 +240,7 @@ export default function InvoicePage() {
 
   /** Reset back to initial capture state */
   function resetForm() {
-    handleRemovePhoto()
+    handleClearAllPhotos()
     setUiMode('capture')
     setSupplierName('')
     setSupplierEmail('')
@@ -220,10 +251,9 @@ export default function InvoicePage() {
     setAiConfidence(null)
     setGstFlagged(false)
     setTaxType(null)
-    setIsPdf(false)
   }
 
-  /** Upload photo to Supabase Storage and return the public URL */
+  /** Upload a single file to Supabase Storage and return the public URL */
   async function uploadPhoto(file: File, cafeDay: string): Promise<string> {
     const supabase = createClient()
     const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -250,8 +280,14 @@ export default function InvoicePage() {
     const cafeDay  = getCurrentCafeDay()
 
     try {
+      // Upload all photos; store first URL in photo_url, extras in additional_photo_urls
       let photoUrl = ''
-      if (photo) photoUrl = await uploadPhoto(photo, cafeDay)
+      const extraUrls: string[] = []
+      for (let i = 0; i < photos.length; i++) {
+        const url = await uploadPhoto(photos[i], cafeDay)
+        if (i === 0) photoUrl = url
+        else extraUrls.push(url)
+      }
 
       const totalAmount = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_amount), 0)
 
@@ -260,21 +296,22 @@ export default function InvoicePage() {
       const xeroSyncStatus = gstFlagged ? 'review' : 'pending'
 
       const { error } = await supabase.from('invoices').insert({
-        scanned_by:       profile.id,
-        supplier_name:    supplierName.trim(),
-        supplier_email:   supplierEmail.trim() || null,
-        invoice_date:     invoiceDate,
-        due_date:         dueDate,
-        reference_number: invoiceNumber.trim(),
-        total_amount:     totalAmount,
-        line_items:       lineItems,
-        photo_url:        photoUrl,
-        ai_confidence:    aiConfidence,
-        status:           'pending',
-        cafe_day:         cafeDay,
-        gst_flagged:      gstFlagged,
-        tax_type:         taxType,
-        xero_sync_status: xeroSyncStatus,
+        scanned_by:             profile.id,
+        supplier_name:          supplierName.trim(),
+        supplier_email:         supplierEmail.trim() || null,
+        invoice_date:           invoiceDate,
+        due_date:               dueDate,
+        reference_number:       invoiceNumber.trim(),
+        total_amount:           totalAmount,
+        line_items:             lineItems,
+        photo_url:              photoUrl,
+        additional_photo_urls:  extraUrls.length > 0 ? extraUrls : null,
+        ai_confidence:          aiConfidence,
+        status:                 'pending',
+        cafe_day:               cafeDay,
+        gst_flagged:            gstFlagged,
+        tax_type:               taxType,
+        xero_sync_status:       xeroSyncStatus,
       })
 
       if (error) { showToast(error.message, 'error'); return }
@@ -480,28 +517,57 @@ export default function InvoicePage() {
         {uiMode === 'choose' && (
           <div className="bg-white rounded-2xl p-6 shadow-sm space-y-4 mb-10"
             style={{ boxShadow: '0 4px 20px rgba(28,28,24,0.06)' }}>
-            {photoPreview && !isPdf && (
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoPreview} alt="Invoice photo" className="w-full h-44 object-cover rounded-xl" />
-                <button onClick={() => { handleRemovePhoto(); setUiMode('capture') }}
-                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-3 py-1 rounded-full">
-                  × Retake
-                </button>
-              </div>
-            )}
-            {isPdf && photo && (
+
+            {/* PDF attachment (single file, no multi-page) */}
+            {isPdf && photos[0] && (
               <div className="flex items-center gap-3 rounded-xl p-4"
                 style={{ backgroundColor: CI.surfaceCt }}>
                 <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '28px' }}>description</span>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate" style={{ color: CI.onSurface }}>{photo.name}</p>
-                  <p className="text-xs" style={{ color: CI.tertiary }}>PDF · {(photo.size / 1024).toFixed(0)} KB</p>
+                  <p className="font-semibold text-sm truncate" style={{ color: CI.onSurface }}>{photos[0].name}</p>
+                  <p className="text-xs" style={{ color: CI.tertiary }}>PDF · {(photos[0].size / 1024).toFixed(0)} KB</p>
                 </div>
-                <button onClick={() => { handleRemovePhoto(); setUiMode('capture') }}
+                <button onClick={() => { handleClearAllPhotos(); setUiMode('capture') }}
                   className="text-sm px-2 py-1" style={{ color: CI.tertiary }}>×</button>
               </div>
             )}
+
+            {/* Photo thumbnail strip — scrolls horizontally if many pages */}
+            {!isPdf && photoPreviews.length > 0 && (
+              <div>
+                <div className="flex gap-2 overflow-x-auto pb-1">
+                  {photoPreviews.map((preview, idx) => (
+                    <div key={idx} className="relative shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={preview} alt={`Page ${idx + 1}`}
+                        className="w-24 h-28 object-cover rounded-xl border-2"
+                        style={{ borderColor: CI.outlineVar }} />
+                      <button
+                        onClick={() => { handleRemovePhoto(idx); if (photos.length <= 1) setUiMode('capture') }}
+                        className="absolute -top-1.5 -right-1.5 w-6 h-6 bg-black/70 text-white rounded-full flex items-center justify-center text-xs leading-none">
+                        ×
+                      </button>
+                      <div className="absolute bottom-1 left-1 bg-black/50 text-white text-[9px] font-bold px-1 rounded">
+                        {idx + 1}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add another page tile */}
+                  <button
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="w-24 h-28 shrink-0 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1"
+                    style={{ borderColor: CI.outlineVar }}>
+                    <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '22px' }}>add_a_photo</span>
+                    <p className="text-[9px] font-semibold text-center leading-tight" style={{ color: CI.tertiary }}>Add page</p>
+                  </button>
+                </div>
+                <p className="text-xs mt-1.5" style={{ color: CI.tertiary }}>
+                  {photoPreviews.length} page{photoPreviews.length > 1 ? 's' : ''} — tap + to add more
+                </p>
+              </div>
+            )}
+
             <p className="text-sm text-center" style={{ color: CI.tertiary }}>
               Extract invoice details automatically with AI?
             </p>
@@ -545,7 +611,7 @@ export default function InvoicePage() {
             style={{ boxShadow: '0 4px 20px rgba(28,28,24,0.06)' }}>
 
             {/* Re-capture mini buttons (shown when no file attached) */}
-            {!photo && (
+            {photos.length === 0 && (
               <div className="flex gap-2">
                 {[
                   { label: '📷 Camera',  action: () => cameraInputRef.current?.click()  },
@@ -561,22 +627,37 @@ export default function InvoicePage() {
               </div>
             )}
 
-            {/* Photo preview */}
-            {photoPreview && !isPdf && (
-              <div className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoPreview} alt="Invoice photo" className="w-full h-36 object-cover rounded-xl" />
-                <button onClick={handleRemovePhoto}
-                  className="absolute top-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                  × Remove
+            {/* Multi-photo thumbnail strip */}
+            {!isPdf && photoPreviews.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {photoPreviews.map((preview, idx) => (
+                  <div key={idx} className="relative shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview} alt={`Page ${idx + 1}`}
+                      className="w-20 h-24 object-cover rounded-xl border"
+                      style={{ borderColor: CI.outlineVar }} />
+                    <button onClick={() => handleRemovePhoto(idx)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-black/70 text-white rounded-full flex items-center justify-center text-xs leading-none">
+                      ×
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="w-20 h-24 shrink-0 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1"
+                  style={{ borderColor: CI.outlineVar }}>
+                  <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '20px' }}>add_a_photo</span>
+                  <p className="text-[9px]" style={{ color: CI.tertiary }}>Add</p>
                 </button>
               </div>
             )}
-            {isPdf && photo && (
+
+            {/* PDF attachment row */}
+            {isPdf && photos[0] && (
               <div className="flex items-center gap-3 rounded-xl p-3" style={{ backgroundColor: CI.surfaceCt }}>
                 <span className="material-symbols-outlined" style={{ color: CI.primary }}>description</span>
-                <p className="flex-1 text-sm font-medium truncate" style={{ color: CI.onSurface }}>{photo.name}</p>
-                <button onClick={handleRemovePhoto} className="text-sm" style={{ color: CI.tertiary }}>× Remove</button>
+                <p className="flex-1 text-sm font-medium truncate" style={{ color: CI.onSurface }}>{photos[0].name}</p>
+                <button onClick={() => handleClearAllPhotos()} className="text-sm" style={{ color: CI.tertiary }}>× Remove</button>
               </div>
             )}
 
