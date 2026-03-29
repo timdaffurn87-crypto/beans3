@@ -201,32 +201,11 @@ function OwnerDashboard({
   cafeDay: string
   onLogOut: () => void
 }) {
-  const taskPct  = data.tasksTotal > 0 ? Math.round((data.tasksCompleted / data.tasksTotal) * 100) : 0
+  const taskPct     = data.tasksTotal > 0 ? Math.round((data.tasksCompleted / data.tasksTotal) * 100) : 0
   const wasteTarget = 50 // default target — a real app would pull from settings
 
-  // Operations status items — blend real data with key operational checks
-  const opsItems = [
-    {
-      label: 'Grinder Calibration',
-      done: data.calibrationCount > 0,
-      warn: false,
-    },
-    {
-      label: `Waste Logged (${formatCurrency(data.wasteTotal)})`,
-      done: data.wasteTotal > 0,
-      warn: data.wasteTotal > wasteTarget,
-    },
-    {
-      label: `Tasks Progress (${data.tasksCompleted}/${data.tasksTotal})`,
-      done: data.tasksCompleted === data.tasksTotal && data.tasksTotal > 0,
-      warn: data.tasksTotal > 0 && taskPct < 70,
-    },
-    {
-      label: 'End of Day Cash Count',
-      done: data.dayIsClosed,
-      warn: false,
-    },
-  ]
+  // Show up to 6 tasks in the Operations Status panel; the rest are in /tasks
+  const opsTasksShown = data.recentTasks.slice(0, 6)
 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
@@ -351,25 +330,84 @@ function OwnerDashboard({
 
         {/* ── Operations Status ── */}
         <div className="bg-white rounded-2xl p-4 card-interactive">
-          <h2 className="text-lg font-bold mb-3" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', color: '#2D2D2D' }}>
-            Operations Status
-          </h2>
-          <div className="space-y-3">
-            {opsItems.map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                {item.done && !item.warn ? (
-                  <span className="material-symbols-outlined text-[#16A34A]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                ) : item.warn ? (
-                  <span className="material-symbols-outlined text-[#DC2626]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>error</span>
-                ) : (
-                  <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '20px' }}>radio_button_unchecked</span>
-                )}
-                <p className={`text-sm ${item.done && !item.warn ? 'text-gray-500' : item.warn ? 'font-semibold text-[#DC2626]' : 'text-gray-700'}`}>
-                  {item.label}
-                </p>
-              </div>
-            ))}
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', color: '#2D2D2D' }}>
+              Operations Status
+            </h2>
+            {data.tasksTotal > 0 && (
+              <span className="text-xs font-semibold" style={{ color: taskPct === 100 ? '#16A34A' : '#D97706' }}>
+                {data.tasksCompleted}/{data.tasksTotal} done
+              </span>
+            )}
           </div>
+
+          <div className="space-y-2.5">
+            {/* Pinned: Calibration */}
+            <div className="flex items-center gap-3">
+              {data.calibrationCount > 0 ? (
+                <span className="material-symbols-outlined text-[#16A34A]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              ) : (
+                <span className="material-symbols-outlined text-[#DC2626]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>error</span>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-medium ${data.calibrationCount > 0 ? 'text-gray-500' : 'text-[#DC2626]'}`}>
+                  Grinder Calibration
+                </p>
+                {data.calibrationCount > 0 && (
+                  <p className="text-xs text-gray-400">{data.calibrationCount} logged today</p>
+                )}
+              </div>
+            </div>
+
+            {/* Divider */}
+            {opsTasksShown.length > 0 && <div className="border-t border-gray-100" />}
+
+            {/* Real task data */}
+            {opsTasksShown.length === 0 ? (
+              <p className="text-sm text-gray-400 py-1">No tasks generated yet today</p>
+            ) : (
+              opsTasksShown.map(task => {
+                const done = !!task.completed_at
+                return (
+                  <div key={task.id} className="flex items-center gap-3">
+                    {done ? (
+                      <span className="material-symbols-outlined text-[#16A34A]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                    ) : (
+                      <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '20px' }}>radio_button_unchecked</span>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-sm ${done ? 'text-gray-400 line-through' : 'font-medium text-gray-700'}`}>
+                        {task.title}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })
+            )}
+
+            {/* Show count of hidden tasks if more than 6 */}
+            {data.recentTasks.length > 6 && (
+              <p className="text-xs text-gray-400 pl-8">
+                +{data.recentTasks.length - 6} more tasks
+              </p>
+            )}
+
+            {/* Divider */}
+            <div className="border-t border-gray-100" />
+
+            {/* Pinned: EOD */}
+            <div className="flex items-center gap-3">
+              {data.dayIsClosed ? (
+                <span className="material-symbols-outlined text-[#16A34A]" style={{ fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+              ) : (
+                <span className="material-symbols-outlined text-gray-300" style={{ fontSize: '20px' }}>radio_button_unchecked</span>
+              )}
+              <p className={`text-sm ${data.dayIsClosed ? 'text-gray-400' : 'font-medium text-gray-700'}`}>
+                End of Day Report
+              </p>
+            </div>
+          </div>
+
           <Link
             href="/tasks"
             className="mt-4 w-full flex items-center justify-center py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600"
