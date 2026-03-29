@@ -13,6 +13,13 @@ import type { Profile, DailyTask } from '@/lib/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface StaffTaskCount {
+  id: string
+  full_name: string
+  role: string
+  count: number
+}
+
 interface DashboardData {
   tasksCompleted: number
   tasksTotal: number
@@ -24,6 +31,7 @@ interface DashboardData {
   incompleteTasks: DailyTask[]
   recentTasks: DailyTask[]           // first 4 for staff checklist
   staffProfiles: Pick<Profile, 'id' | 'full_name' | 'role'>[]
+  tasksByStaff: StaffTaskCount[]     // ranked by tasks completed today
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -384,6 +392,63 @@ function OwnerDashboard({
           >
             View Full Checklist
           </Link>
+        </div>
+
+        {/* ── Staff Task Leaderboard ── */}
+        <div className="bg-white rounded-2xl p-4">
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="text-lg font-bold" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', color: '#2D2D2D' }}>
+              Staff Activity
+            </h2>
+            <span className="text-xs font-semibold" style={{ color: '#296861' }}>Today</span>
+          </div>
+
+          {data.tasksByStaff.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-3">No tasks completed yet</p>
+          ) : (
+            <div className="space-y-2.5">
+              {data.tasksByStaff.map((s, idx) => {
+                const barWidth = data.tasksCompleted > 0
+                  ? Math.round((s.count / data.tasksByStaff[0].count) * 100)
+                  : 0
+                const medal = idx === 0 ? '#B8960C' : idx === 1 ? '#9E9E9E' : idx === 2 ? '#CD7F32' : null
+                return (
+                  <div key={s.id} className="flex items-center gap-3">
+                    {/* Rank / medal */}
+                    <div className="w-6 shrink-0 text-center">
+                      {medal ? (
+                        <span className="material-symbols-outlined" style={{ fontSize: '16px', color: medal, fontVariationSettings: "'FILL' 1" }}>workspace_premium</span>
+                      ) : (
+                        <span className="text-xs font-bold text-gray-300">{idx + 1}</span>
+                      )}
+                    </div>
+
+                    {/* Avatar */}
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+                    >
+                      {initials(s.full_name)}
+                    </div>
+
+                    {/* Name + bar */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline justify-between mb-1">
+                        <p className="text-sm font-semibold truncate" style={{ color: '#2D2D2D' }}>{s.full_name}</p>
+                        <span className="text-xs font-bold shrink-0 ml-2" style={{ color: '#296861' }}>{s.count}</span>
+                      </div>
+                      <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{ width: `${barWidth}%`, background: 'linear-gradient(90deg, #296861 0%, #73b0a8 100%)' }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* ── Management links ── */}
@@ -790,6 +855,17 @@ export default function DashboardPage() {
       const tasksCompleted   = tasks.filter(t => t.completed_at).length
       const wasteTotal       = wasteRes.data?.reduce((s, w) => s + w.total_cost, 0) ?? 0
       const invoicesTotal    = invoicesRes.data?.reduce((s, i) => s + i.total_amount, 0) ?? 0
+      const staffList        = (staffRes.data ?? []) as Pick<Profile, 'id' | 'full_name' | 'role'>[]
+
+      // Count completed tasks per staff member for today's leaderboard
+      const countMap: Record<string, number> = {}
+      tasks.filter(t => t.completed_by).forEach(t => {
+        countMap[t.completed_by!] = (countMap[t.completed_by!] ?? 0) + 1
+      })
+      const tasksByStaff: StaffTaskCount[] = staffList
+        .map(s => ({ id: s.id, full_name: s.full_name, role: s.role, count: countMap[s.id] ?? 0 }))
+        .filter(s => s.count > 0)
+        .sort((a, b) => b.count - a.count)
 
       setData({
         tasksCompleted,
@@ -801,7 +877,8 @@ export default function DashboardPage() {
         calibrationCount:  calRes.data?.length ?? 0,
         incompleteTasks:   tasks.filter(t => !t.completed_at),
         recentTasks:       tasks,
-        staffProfiles:     (staffRes.data ?? []) as Pick<Profile, 'id' | 'full_name' | 'role'>[],
+        staffProfiles:     staffList,
+        tasksByStaff,
       })
     }
 
