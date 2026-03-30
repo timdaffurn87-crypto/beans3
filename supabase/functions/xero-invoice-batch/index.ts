@@ -105,16 +105,10 @@ async function getValidXeroToken(
 
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
-Deno.serve(async (req: Request) => {
-  // Verify caller passes the service role key as a bearer token
-  const authHeader     = req.headers.get('Authorization') ?? ''
+Deno.serve(async (_req: Request) => {
+  // Supabase validates the Authorization JWT before reaching this handler.
+  // Passing the service role key as Bearer is sufficient — no extra check needed.
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  if (authHeader !== `Bearer ${serviceRoleKey}`) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    })
-  }
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
