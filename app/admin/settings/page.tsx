@@ -615,8 +615,15 @@ export default function SettingsPage() {
                       <span className="text-xs text-gray-500 font-medium">Not connected</span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      Connection is set up by your developer. See the <code className="bg-gray-100 px-1 py-0.5 rounded text-xs">xero-auth-callback</code> Edge Function for setup instructions.
+                      Connect your Xero account to automatically sync invoices each day at 3:00 PM.
                     </p>
+                    <a
+                      href="/api/xero/connect"
+                      className="block w-full py-3 rounded-xl text-center text-sm font-semibold text-white"
+                      style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+                    >
+                      Connect Xero Account
+                    </a>
                   </div>
                 )}
 

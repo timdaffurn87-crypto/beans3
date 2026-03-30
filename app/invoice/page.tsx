@@ -63,6 +63,11 @@ export default function InvoicePage() {
   const libraryInputRef = useRef<HTMLInputElement>(null)
   const pdfInputRef     = useRef<HTMLInputElement>(null)
 
+  // Incrementing key forces React to remount the file inputs after each selection.
+  // On iOS Safari, clearing input.value is not enough to re-trigger the camera —
+  // a full remount is the only reliable fix.
+  const [fileInputKey, setFileInputKey] = useState(0)
+
   // File state — supports multiple photos for multi-page invoices
   const [photos, setPhotos]               = useState<File[]>([])
   const [photoPreviews, setPhotoPreviews] = useState<string[]>([])
@@ -119,34 +124,34 @@ export default function InvoicePage() {
     if (profile) fetchTodayInvoices()
   }, [profile])
 
-  /** Handle file selection — appends images, or replaces when a PDF is chosen */
+  /** Handle file selection — appends images, or replaces when a PDF is chosen.
+   *  Supports single camera shots and multi-select from library. */
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
 
-    const pdf = file.type === 'application/pdf'
+    const hasPdf = files.some(f => f.type === 'application/pdf')
 
-    if (pdf) {
-      // PDFs replace everything (they are already multi-page)
+    if (hasPdf) {
+      // PDF replaces everything (already multi-page internally)
       photoPreviews.forEach(url => url && URL.revokeObjectURL(url))
-      setPhotos([file])
+      setPhotos([files[0]])
       setPhotoPreviews([''])
     } else {
-      // Images append to the list (don't append if a PDF is already loaded)
+      // Images append — clear existing if we're switching away from a PDF
       if (isPdf) {
         photoPreviews.forEach(url => url && URL.revokeObjectURL(url))
-        setPhotos([file])
-        setPhotoPreviews([URL.createObjectURL(file)])
+        setPhotos(files)
+        setPhotoPreviews(files.map(f => URL.createObjectURL(f)))
       } else {
-        setPhotos(prev => [...prev, file])
-        setPhotoPreviews(prev => [...prev, URL.createObjectURL(file)])
+        setPhotos(prev => [...prev, ...files])
+        setPhotoPreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))])
       }
     }
 
     setUiMode('choose')
-    if (cameraInputRef.current)  cameraInputRef.current.value  = ''
-    if (libraryInputRef.current) libraryInputRef.current.value = ''
-    if (pdfInputRef.current)     pdfInputRef.current.value     = ''
+    // Remount all file inputs so iOS re-triggers the camera on the next tap
+    setFileInputKey(k => k + 1)
   }
 
   /** Remove a single photo by index */
@@ -414,9 +419,9 @@ export default function InvoicePage() {
     <div className="min-h-screen pb-28" style={{ backgroundColor: CI.surface }}>
 
       {/* Hidden file inputs — always mounted so refs are available everywhere */}
-      <input ref={cameraInputRef}  type="file" accept="image/*"        capture="environment" className="hidden" onChange={handleFileSelect} />
-      <input ref={libraryInputRef} type="file" accept="image/*"        className="hidden"                       onChange={handleFileSelect} />
-      <input ref={pdfInputRef}     type="file" accept="application/pdf" className="hidden"                      onChange={handleFileSelect} />
+      <input key={`cam-${fileInputKey}`}  ref={cameraInputRef}  type="file" accept="image/*"         capture="environment" className="hidden" onChange={handleFileSelect} />
+      <input key={`lib-${fileInputKey}`}  ref={libraryInputRef} type="file" accept="image/*"         multiple              className="hidden" onChange={handleFileSelect} />
+      <input key={`pdf-${fileInputKey}`}  ref={pdfInputRef}     type="file" accept="application/pdf"                       className="hidden" onChange={handleFileSelect} />
 
       <div className="px-5 pt-12 pb-4 max-w-2xl mx-auto">
 
