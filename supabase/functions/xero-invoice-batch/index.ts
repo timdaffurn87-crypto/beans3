@@ -266,8 +266,8 @@ Deno.serve(async (_req: Request) => {
 
 function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown> {
   const taxType     = inv.tax_type as string | null
-  // Xero LineAmountTypes values: 'INCLUSIVE', 'EXCLUSIVE', 'NONE' (not 'NOTAX')
-  const lineAmounts = taxType === 'NOTAX' ? 'NONE' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
+  // Xero LineAmountTypes: EXCLUSIVE (ex-GST), INCLUSIVE (inc-GST), NOTAX (no GST)
+  const lineAmounts = taxType === 'NOTAX' ? 'NOTAX' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
   const lineTaxType = taxType === 'NOTAX' ? 'NONE' : 'INPUT'
 
   const lineItems = (inv.line_items as Array<{
@@ -282,7 +282,9 @@ function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown>
     UnitAmount:  item.unit_amount,
     AccountCode: item.account_code || '310',
     TaxType:     lineTaxType,
-    ...(item.inventory_item_code?.trim() ? { ItemCode: item.inventory_item_code.trim() } : {}),
+    // Do NOT send ItemCode — supplier item codes are not Xero item codes.
+    // Sending them causes Xero to look up its own item master and apply
+    // conflicting tax types, breaking LineAmountTypes validation.
   }))
 
   return {
