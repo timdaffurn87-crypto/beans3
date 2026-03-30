@@ -454,7 +454,7 @@ export default function InvoicePage() {
                 Take Photo
               </h2>
               <p className="text-white/75 text-sm max-w-xs">
-                Scan physical receipts directly with your camera for instant AI processing.
+                Scan receipts with your camera — add multiple pages for longer invoices.
               </p>
 
               {/* CTA row */}
@@ -581,17 +581,24 @@ export default function InvoicePage() {
                     </div>
                   ))}
 
-                  {/* Add another page tile */}
+                  {/* Add another page tiles */}
                   <button
                     onClick={() => cameraInputRef.current?.click()}
                     className="w-24 h-28 shrink-0 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1"
                     style={{ borderColor: CI.outlineVar }}>
                     <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '22px' }}>add_a_photo</span>
-                    <p className="text-[9px] font-semibold text-center leading-tight" style={{ color: CI.tertiary }}>Add page</p>
+                    <p className="text-[9px] font-semibold text-center leading-tight" style={{ color: CI.tertiary }}>Camera</p>
+                  </button>
+                  <button
+                    onClick={() => libraryInputRef.current?.click()}
+                    className="w-24 h-28 shrink-0 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-1"
+                    style={{ borderColor: CI.outlineVar }}>
+                    <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '22px' }}>add_photo_alternate</span>
+                    <p className="text-[9px] font-semibold text-center leading-tight" style={{ color: CI.tertiary }}>Library</p>
                   </button>
                 </div>
                 <p className="text-xs mt-1.5" style={{ color: CI.tertiary }}>
-                  {photoPreviews.length} page{photoPreviews.length > 1 ? 's' : ''} — tap + to add more
+                  {photoPreviews.length} page{photoPreviews.length > 1 ? 's' : ''} captured — add more for multi-page invoices
                 </p>
               </div>
             )}
@@ -675,7 +682,14 @@ export default function InvoicePage() {
                   className="w-20 h-24 shrink-0 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1"
                   style={{ borderColor: CI.outlineVar }}>
                   <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '20px' }}>add_a_photo</span>
-                  <p className="text-[9px]" style={{ color: CI.tertiary }}>Add</p>
+                  <p className="text-[9px]" style={{ color: CI.tertiary }}>Camera</p>
+                </button>
+                <button
+                  onClick={() => libraryInputRef.current?.click()}
+                  className="w-20 h-24 shrink-0 rounded-xl border border-dashed flex flex-col items-center justify-center gap-1"
+                  style={{ borderColor: CI.outlineVar }}>
+                  <span className="material-symbols-outlined" style={{ color: CI.primary, fontSize: '20px' }}>add_photo_alternate</span>
+                  <p className="text-[9px]" style={{ color: CI.tertiary }}>Library</p>
                 </button>
               </div>
             )}
