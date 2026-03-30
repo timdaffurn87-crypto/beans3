@@ -292,9 +292,11 @@ function mapToXeroInvoice(inv: Record<string, unknown>, contactId: string): Reco
     LineItems:       lineItems,
     CurrencyCode:    'AUD',
     Status:          'DRAFT',
-    ...(inv.reference_number ? { InvoiceNumber: inv.reference_number } : {}),
-    ...(inv.invoice_date     ? { Date:          inv.invoice_date }     : {}),
-    ...(inv.due_date         ? { DueDate:       inv.due_date }         : {}),
+    // Supplier's invoice number goes in Reference (not InvoiceNumber) — Xero auto-numbers the bill.
+    // Using InvoiceNumber causes collisions with previously voided/failed attempts.
+    ...(inv.reference_number ? { Reference: inv.reference_number } : {}),
+    ...(inv.invoice_date     ? { Date:       inv.invoice_date }    : {}),
+    ...(inv.due_date         ? { DueDate:    inv.due_date }        : {}),
   }
 }
 
