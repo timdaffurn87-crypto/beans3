@@ -80,10 +80,6 @@ export default function InvoicePage() {
   // AI confidence after extraction
   const [aiConfidence, setAiConfidence] = useState<'high' | 'medium' | 'low' | null>(null)
 
-  // GST detection state — set by AI extraction, shown as warning banner when flagged
-  const [gstFlagged, setGstFlagged] = useState(false)
-  const [taxType, setTaxType] = useState<'INCLUSIVE' | 'EXCLUSIVE' | 'NOTAX' | null>(null)
-
   // Form fields — aligned to Xero Bill Import columns
   const [supplierName, setSupplierName]   = useState('')   // ContactName
   const [supplierEmail, setSupplierEmail] = useState('')   // EmailAddress
@@ -219,8 +215,6 @@ export default function InvoicePage() {
       }
 
       setAiConfidence(data.confidence || null)
-      setGstFlagged(data.gst_flagged ?? false)
-      setTaxType(data.tax_type ?? null)
       setUiMode('form')
       showToast('Invoice extracted — please verify', 'success')
     } catch {
@@ -258,8 +252,6 @@ export default function InvoicePage() {
     setDueDate('')
     setLineItems([blankLineItem()])
     setAiConfidence(null)
-    setGstFlagged(false)
-    setTaxType(null)
   }
 
   /**
@@ -308,10 +300,6 @@ export default function InvoicePage() {
 
       const totalAmount = lineItems.reduce((sum, item) => sum + (item.quantity * item.unit_amount), 0)
 
-      // gst_flagged invoices get xero_sync_status='review' — excluded from
-      // the 3 PM batch until a manager resolves the GST treatment manually.
-      const xeroSyncStatus = gstFlagged ? 'review' : 'pending'
-
       const { error } = await supabase.from('invoices').insert({
         scanned_by:             profile.id,
         supplier_name:          supplierName.trim(),
@@ -326,9 +314,7 @@ export default function InvoicePage() {
         ai_confidence:          aiConfidence,
         status:                 'pending',
         cafe_day:               cafeDay,
-        gst_flagged:            gstFlagged,
-        tax_type:               taxType,
-        xero_sync_status:       xeroSyncStatus,
+        xero_sync_status:       'pending',
       })
 
       if (error) { showToast(error.message, 'error'); return }
@@ -392,12 +378,6 @@ export default function InvoicePage() {
       <span className="text-[10px] font-semibold uppercase tracking-tight px-2 py-0.5 rounded"
         style={{ backgroundColor: 'rgba(41,104,97,0.12)', color: CI.primary }}>
         Processed
-      </span>
-    )
-    if (inv.xero_sync_status === 'review') return (
-      <span className="text-[10px] font-semibold uppercase tracking-tight px-2 py-0.5 rounded"
-        style={{ backgroundColor: 'rgba(254,203,142,0.5)', color: CI.secondary }}>
-        GST Review
       </span>
     )
     if (inv.xero_sync_status === 'failed') return (
@@ -722,24 +702,6 @@ export default function InvoicePage() {
                   {aiConfidence === 'medium' && 'AI extracted · Medium confidence — please verify'}
                   {aiConfidence === 'low'    && 'AI extracted · Low confidence — verify carefully'}
                 </span>
-              </div>
-            )}
-
-            {/* GST flagged warning */}
-            {gstFlagged && (
-              <div className="flex items-start gap-3 px-4 py-3 rounded-xl"
-                style={{ backgroundColor: 'rgba(254,203,142,0.3)', border: '1px solid rgba(124,87,37,0.2)' }}>
-                <span className="material-symbols-outlined shrink-0 mt-0.5" style={{ color: CI.secondary, fontSize: '20px', fontVariationSettings: "'FILL' 1" }}>
-                  warning
-                </span>
-                <div>
-                  <p className="text-sm font-semibold" style={{ color: CI.secondary }}>
-                    GST type unclear — flagged for review
-                  </p>
-                  <p className="text-xs mt-0.5 leading-relaxed" style={{ color: CI.secondary, opacity: 0.8 }}>
-                    This invoice will be held back from Xero sync. Ask your manager to set the correct GST treatment before end of day.
-                  </p>
-                </div>
               </div>
             )}
 

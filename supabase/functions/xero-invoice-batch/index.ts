@@ -4,49 +4,22 @@
 // Runs daily via Supabase cron at 05:00 UTC (15:00 AEST / 16:00 AEDT).
 // Also triggered manually via POST /api/xero/sync from the invoice page.
 //
-// Pulls all invoices with xero_sync_status = 'pending' for today's café day,
-// maps them to Xero ACCPAY bills, and posts them to the Xero Invoices API.
+// For each pending/failed invoice today:
+//   1. Ensures the supplier contact exists in Xero (creates it if not)
+//   2. Pushes the invoice as a DRAFT ACCPAY bill
+//   3. Marks xero_sync_status = 'synced' or 'failed'
 //
-// After the API call it also generates a Xero-format CSV (one row per line
-// item) and saves it to the "xero-csv-exports" Supabase Storage bucket for
-// audit purposes — useful if manual re-import is ever needed.
+// GST is handled entirely by Xero's chart of accounts — we always send
+// LineAmountTypes=EXCLUSIVE and let Xero apply the correct tax rate per
+// account code. No GST review/flagging in Beans.
 //
 // Cron schedule: 0 5 * * *
-// Set in: Supabase Dashboard → Edge Functions → xero-invoice-batch → Cron
-//
-// GST handling (invoice-level tax_type):
-//   'INCLUSIVE' → LineAmountTypes=INCLUSIVE, TaxType=INPUT
-//   'EXCLUSIVE' → LineAmountTypes=EXCLUSIVE, TaxType=INPUT
-//   'NOTAX'     → LineAmountTypes=NOTAX,     TaxType=NONE
-//   null + gst_flagged=true → xero_sync_status='review', SKIPPED
-//
-// On success: sets xero_sync_status='synced', xero_invoice_id, xero_synced_at
-// On failure: sets xero_sync_status='failed'
 // =============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-/** Maximum invoices per Xero API batch call */
-const BATCH_SIZE = 50
-
-// ─── Xero CSV column headers (exact order required for manual import) ─────────
-const XERO_CSV_HEADERS = [
-  '*ContactName', 'EmailAddress',
-  'POAddressLine1', 'POAddressLine2', 'POAddressLine3', 'POAddressLine4',
-  'POCity', 'PORegion', 'POPostalCode', 'POCountry',
-  '*InvoiceNumber', '*InvoiceDate', '*DueDate',
-  'InventoryItemCode', 'Description',
-  '*Quantity', '*UnitAmount', '*AccountCode', '*TaxType',
-  'TrackingName1', 'TrackingOption1', 'TrackingName2', 'TrackingOption2',
-  'Currency',
-]
-
 // ─── Token refresh (inlined — edge functions cannot import sibling functions) ──
 
-/**
- * Returns a valid Xero access token, refreshing it first if it expires
- * within the next 5 minutes. Updates xero_tokens with the new tokens.
- */
 async function getValidXeroToken(
   supabase: ReturnType<typeof createClient>
 ): Promise<{ access_token: string; tenant_id: string }> {
@@ -60,22 +33,19 @@ async function getValidXeroToken(
   }
 
   const expiresAt  = new Date(row.expires_at).getTime()
-  const fiveMin    = 5 * 60 * 1000
-  const needsRefresh = Date.now() >= expiresAt - fiveMin
+  const needsRefresh = Date.now() >= expiresAt - 5 * 60 * 1000
 
   if (!needsRefresh) {
     return { access_token: row.access_token, tenant_id: row.tenant_id }
   }
 
-  // Refresh the token
   const clientId     = Deno.env.get('XERO_CLIENT_ID')!
   const clientSecret = Deno.env.get('XERO_CLIENT_SECRET')!
-  const credentials  = btoa(`${clientId}:${clientSecret}`)
 
   const res = await fetch('https://identity.xero.com/connect/token', {
     method:  'POST',
     headers: {
-      'Authorization': `Basic ${credentials}`,
+      'Authorization': `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
       'Content-Type':  'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
@@ -85,14 +55,12 @@ async function getValidXeroToken(
   })
 
   if (!res.ok) {
-    const body = await res.text()
-    throw new Error(`Token refresh failed: ${res.status} — ${body}`)
+    throw new Error(`Token refresh failed: ${res.status} — ${await res.text()}`)
   }
 
   const tokens = await res.json()
   const newExpiresAt = new Date(Date.now() + (tokens.expires_in as number) * 1000).toISOString()
 
-  // Xero rotates refresh tokens — always save the new one immediately
   await supabase.from('xero_tokens').update({
     access_token:  tokens.access_token,
     refresh_token: tokens.refresh_token,
@@ -103,11 +71,68 @@ async function getValidXeroToken(
   return { access_token: tokens.access_token, tenant_id: row.tenant_id }
 }
 
+// ─── Contact upsert ───────────────────────────────────────────────────────────
+
+/**
+ * Ensures a Xero contact exists for the given supplier name.
+ * Searches by name first — creates if not found.
+ * Returns the ContactID.
+ */
+async function ensureXeroContact(
+  supplierName: string,
+  supplierEmail: string | null,
+  accessToken: string,
+  tenantId: string
+): Promise<string> {
+  const headers = {
+    'Authorization':  `Bearer ${accessToken}`,
+    'Xero-Tenant-Id': tenantId,
+    'Content-Type':   'application/json',
+    'Accept':         'application/json',
+  }
+
+  // Search for existing contact by name
+  const searchRes = await fetch(
+    `https://api.xero.com/api.xro/2.0/Contacts?where=Name%3D%3D%22${encodeURIComponent(supplierName)}%22`,
+    { headers }
+  )
+
+  if (searchRes.ok) {
+    const data = await searchRes.json() as { Contacts: { ContactID: string }[] }
+    if (data.Contacts?.length > 0) {
+      return data.Contacts[0].ContactID
+    }
+  }
+
+  // Contact not found — create it
+  const createRes = await fetch('https://api.xero.com/api.xro/2.0/Contacts', {
+    method:  'POST',
+    headers,
+    body: JSON.stringify({
+      Contacts: [{
+        Name: supplierName,
+        IsSupplier: true,
+        ...(supplierEmail ? { EmailAddress: supplierEmail } : {}),
+      }],
+    }),
+  })
+
+  if (!createRes.ok) {
+    throw new Error(`Failed to create Xero contact for "${supplierName}": ${await createRes.text()}`)
+  }
+
+  const created = await createRes.json() as { Contacts: { ContactID: string }[] }
+  const contactId = created.Contacts?.[0]?.ContactID
+
+  if (!contactId) throw new Error(`Xero returned no ContactID when creating "${supplierName}"`)
+
+  console.log(`Created Xero contact: ${supplierName} → ${contactId}`)
+  return contactId
+}
+
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (_req: Request) => {
-  // Supabase validates the Authorization JWT before reaching this handler.
-  // Passing the service role key as Bearer is sufficient — no extra check needed.
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
   const supabase = createClient(
@@ -117,14 +142,12 @@ Deno.serve(async (_req: Request) => {
   )
 
   try {
-    // Compute today's café day date in AEST (UTC+10 fixed offset)
     const aestNow = new Date(Date.now() + 10 * 60 * 60 * 1000)
     const cafeDay = aestNow.toISOString().split('T')[0]
 
     console.log(`xero-invoice-batch: processing café day ${cafeDay}`)
 
-    // Fetch all pending AND previously-failed invoices for today's café day.
-    // Including 'failed' means the manual "Push to Xero" button acts as a retry.
+    // Fetch pending and previously-failed invoices (failed = retry on manual trigger)
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select('*')
@@ -133,122 +156,101 @@ Deno.serve(async (_req: Request) => {
       .not('line_items', 'is', null)
 
     if (fetchError) throw new Error(`Failed to fetch invoices: ${fetchError.message}`)
+
     if (!invoices || invoices.length === 0) {
-      console.log('No pending invoices to sync.')
       return new Response(JSON.stringify({ success: true, synced: 0, skipped: 0, failed: 0 }), {
         headers: { 'Content-Type': 'application/json' },
       })
     }
 
-    // Separate invoices that need GST review
+    // Filter to invoices that have at least one line item
     const toSync = invoices.filter(inv =>
-      !(inv.gst_flagged === true && inv.tax_type === null) &&
       Array.isArray(inv.line_items) && inv.line_items.length > 0
     )
-    const skippedFlagged = invoices.filter(inv => inv.gst_flagged === true && inv.tax_type === null)
-
-    if (skippedFlagged.length > 0) {
-      console.log(`Skipping ${skippedFlagged.length} flagged invoices — GST type needs review`)
-    }
 
     if (toSync.length === 0) {
-      return new Response(
-        JSON.stringify({ success: true, synced: 0, skipped: skippedFlagged.length, failed: 0 }),
-        { headers: { 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ success: true, synced: 0, skipped: 0, failed: 0 }), {
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
-    // Get a valid Xero access token (refreshes automatically if needed)
     const { access_token, tenant_id } = await getValidXeroToken(supabase)
 
     let totalSynced = 0
     let totalFailed = 0
     const failedInvoiceIds: string[] = []
 
-    // ── JSON API posting ───────────────────────────────────────────────────
-    for (let i = 0; i < toSync.length; i += BATCH_SIZE) {
-      const batch       = toSync.slice(i, i + BATCH_SIZE)
-      const xeroInvoices = batch.map(inv => mapToXeroInvoice(inv))
+    // Push one invoice at a time so contact creation works per-supplier
+    for (const inv of toSync) {
+      try {
+        // Ensure the supplier exists as a Xero contact (creates if missing)
+        const contactId = await ensureXeroContact(
+          inv.supplier_name as string,
+          inv.supplier_email as string | null,
+          access_token,
+          tenant_id
+        )
 
-      const res = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
-        method:  'POST',
-        headers: {
-          'Authorization':  `Bearer ${access_token}`,
-          'Xero-Tenant-Id': tenant_id,
-          'Content-Type':   'application/json',
-          'Accept':         'application/json',
-        },
-        body: JSON.stringify({ Invoices: xeroInvoices }),
-      })
+        const xeroInvoice = mapToXeroInvoice(inv, contactId)
 
-      if (!res.ok) {
-        const body = await res.text()
-        console.error(`Xero batch API error: ${res.status} — ${body}`)
-        for (const inv of batch) {
-          await supabase.from('invoices')
-            .update({ xero_sync_status: 'failed' })
-            .eq('id', inv.id)
-          failedInvoiceIds.push(inv.id)
-          totalFailed++
+        const res = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
+          method:  'POST',
+          headers: {
+            'Authorization':  `Bearer ${access_token}`,
+            'Xero-Tenant-Id': tenant_id,
+            'Content-Type':   'application/json',
+            'Accept':         'application/json',
+          },
+          body: JSON.stringify({ Invoices: [xeroInvoice] }),
+        })
+
+        const data = await res.json() as {
+          Invoices?: Array<{
+            InvoiceID: string
+            HasErrors: boolean
+            ValidationErrors?: Array<{ Message: string }>
+          }>
         }
-        continue
-      }
 
-      const data             = await res.json()
-      const returnedInvoices = (data?.Invoices ?? []) as Array<{
-        InvoiceID: string
-        HasErrors: boolean
-        ValidationErrors?: Array<{ Message: string }>
-      }>
+        const returned = data.Invoices?.[0]
 
-      for (let j = 0; j < batch.length; j++) {
-        const inv      = batch[j]
-        const returned = returnedInvoices[j]
-
-        if (!returned || returned.HasErrors) {
-          const errs = (returned?.ValidationErrors ?? []).map((e: { Message: string }) => e.Message).join('; ')
-          console.error(`Invoice ${inv.id} failed: ${errs}`)
-          await supabase.from('invoices')
-            .update({ xero_sync_status: 'failed' })
-            .eq('id', inv.id)
-          failedInvoiceIds.push(inv.id)
-          totalFailed++
-        } else {
-          await supabase.from('invoices')
-            .update({
-              xero_sync_status: 'synced',
-              xero_invoice_id:  returned.InvoiceID,
-              xero_synced_at:   new Date().toISOString(),
-            })
-            .eq('id', inv.id)
-          totalSynced++
+        if (!res.ok || !returned || returned.HasErrors) {
+          const errs = (returned?.ValidationErrors ?? []).map(e => e.Message).join('; ')
+          const httpErr = !res.ok ? `HTTP ${res.status}` : ''
+          throw new Error([httpErr, errs].filter(Boolean).join(' — '))
         }
+
+        await supabase.from('invoices').update({
+          xero_sync_status: 'synced',
+          xero_invoice_id:  returned.InvoiceID,
+          xero_synced_at:   new Date().toISOString(),
+        }).eq('id', inv.id)
+
+        totalSynced++
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        console.error(`Invoice ${inv.id} (${inv.supplier_name}) failed: ${msg}`)
+
+        await supabase.from('invoices')
+          .update({ xero_sync_status: 'failed' })
+          .eq('id', inv.id)
+
+        failedInvoiceIds.push(inv.id as string)
+        totalFailed++
       }
     }
 
-    // ── CSV export (audit backup) ──────────────────────────────────────────
+    // CSV audit export (non-fatal)
     try {
-      const csvContent = buildXeroCsv(toSync)
-      const csvBytes   = new TextEncoder().encode(csvContent)
-
+      const csvBytes = new TextEncoder().encode(buildXeroCsv(toSync))
       await supabase.storage
         .from('xero-csv-exports')
         .upload(`${cafeDay}.csv`, csvBytes, { contentType: 'text/csv', upsert: true })
-
-      console.log(`xero-invoice-batch: CSV saved to xero-csv-exports/${cafeDay}.csv`)
     } catch (csvErr) {
-      const msg = csvErr instanceof Error ? csvErr.message : String(csvErr)
-      console.warn(`xero-invoice-batch: CSV export failed (non-fatal): ${msg}`)
+      console.warn(`CSV export failed (non-fatal): ${csvErr instanceof Error ? csvErr.message : csvErr}`)
     }
 
-    const result = {
-      success:    true,
-      cafe_day:   cafeDay,
-      synced:     totalSynced,
-      skipped:    skippedFlagged.length,
-      failed:     totalFailed,
-      failed_ids: failedInvoiceIds,
-    }
+    const result = { success: true, cafe_day: cafeDay, synced: totalSynced, skipped: 0, failed: totalFailed, failed_ids: failedInvoiceIds }
     console.log('xero-invoice-batch complete:', result)
     return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
 
@@ -264,66 +266,64 @@ Deno.serve(async (_req: Request) => {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown> {
-  const taxType     = inv.tax_type as string | null
-  // Xero LineAmountTypes: EXCLUSIVE (ex-GST), INCLUSIVE (inc-GST), NOTAX (no GST)
-  const lineAmounts = taxType === 'NOTAX' ? 'NOTAX' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
-  const lineTaxType = taxType === 'NOTAX' ? 'NONE' : 'INPUT'
-
+/**
+ * Maps a Beans invoice to a Xero ACCPAY bill payload.
+ * Always sends LineAmountTypes=EXCLUSIVE — Xero applies the correct tax
+ * rate automatically based on the chart of accounts (account code).
+ * We do not send ItemCode — supplier codes are not Xero inventory codes.
+ */
+function mapToXeroInvoice(inv: Record<string, unknown>, contactId: string): Record<string, unknown> {
   const lineItems = (inv.line_items as Array<{
     description: string
     quantity: number
     unit_amount: number
     account_code?: string
-    inventory_item_code?: string
   }>).map(item => ({
     Description: item.description,
     Quantity:    item.quantity,
     UnitAmount:  item.unit_amount,
     AccountCode: item.account_code || '310',
-    TaxType:     lineTaxType,
-    // Do NOT send ItemCode — supplier item codes are not Xero item codes.
-    // Sending them causes Xero to look up its own item master and apply
-    // conflicting tax types, breaking LineAmountTypes validation.
   }))
 
   return {
     Type:            'ACCPAY',
-    Contact:         { Name: inv.supplier_name },
-    ...(inv.supplier_email    ? { EmailAddress:  inv.supplier_email }    : {}),
-    ...(inv.reference_number  ? { InvoiceNumber: inv.reference_number }  : {}),
-    ...(inv.invoice_date      ? { Date:          inv.invoice_date }      : {}),
-    ...(inv.due_date          ? { DueDate:       inv.due_date }          : {}),
-    LineAmountTypes: lineAmounts,
+    Contact:         { ContactID: contactId },
+    LineAmountTypes: 'EXCLUSIVE',
     LineItems:       lineItems,
     CurrencyCode:    'AUD',
     Status:          'DRAFT',
+    ...(inv.reference_number ? { InvoiceNumber: inv.reference_number } : {}),
+    ...(inv.invoice_date     ? { Date:          inv.invoice_date }     : {}),
+    ...(inv.due_date         ? { DueDate:       inv.due_date }         : {}),
   }
 }
+
+// ─── CSV export (audit backup) ────────────────────────────────────────────────
+
+const XERO_CSV_HEADERS = [
+  '*ContactName', 'EmailAddress',
+  'POAddressLine1', 'POAddressLine2', 'POAddressLine3', 'POAddressLine4',
+  'POCity', 'PORegion', 'POPostalCode', 'POCountry',
+  '*InvoiceNumber', '*InvoiceDate', '*DueDate',
+  'Description', '*Quantity', '*UnitAmount', '*AccountCode', '*TaxType',
+  'TrackingName1', 'TrackingOption1', 'TrackingName2', 'TrackingOption2',
+  'Currency',
+]
 
 function buildXeroCsv(invoices: Record<string, unknown>[]): string {
   function csvCell(value: string | number | null | undefined): string {
     const str = value === null || value === undefined ? '' : String(value)
-    if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-      return `"${str.replace(/"/g, '""')}"`
-    }
-    return str
+    return str.includes(',') || str.includes('"') || str.includes('\n')
+      ? `"${str.replace(/"/g, '""')}"`
+      : str
   }
 
   const rows: string[] = [XERO_CSV_HEADERS.join(',')]
 
   for (const inv of invoices) {
-    const taxType    = inv.tax_type as string | null
-    const csvTaxType = (taxType === 'NOTAX' || taxType === 'NONE') ? 'GST Free Expenses' : 'GST on Expenses'
-
     const lineItems = inv.line_items as Array<{
-      description: string
-      quantity: number
-      unit_amount: number
-      account_code?: string
-      inventory_item_code?: string
+      description: string; quantity: number; unit_amount: number; account_code?: string
     }>
-
     for (const item of lineItems) {
       rows.push([
         csvCell(inv.supplier_name as string),
@@ -332,12 +332,11 @@ function buildXeroCsv(invoices: Record<string, unknown>[]): string {
         csvCell(inv.reference_number as string),
         csvCell(inv.invoice_date as string),
         csvCell(inv.due_date as string),
-        csvCell(item.inventory_item_code || ''),
         csvCell(item.description),
         csvCell(item.quantity),
         csvCell(item.unit_amount),
         csvCell(item.account_code || '310'),
-        csvCell(csvTaxType),
+        'GST on Expenses',
         '', '', '', '',
         'AUD',
       ].join(','))

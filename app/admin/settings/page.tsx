@@ -44,11 +44,6 @@ export default function SettingsPage() {
   const [disconnectingXero, setDisconnectingXero] = useState(false)
   const [xeroStatusLoading, setXeroStatusLoading] = useState(true)
 
-  // GST-inclusive suppliers — now sourced from dedicated table (id + supplier_name)
-  const [gstInclusiveSuppliers, setGstInclusiveSuppliers] = useState<{ id: string; supplier_name: string }[]>([])
-  const [newSupplierInput, setNewSupplierInput] = useState('')
-  const [savingSupplier, setSavingSupplier] = useState(false)
-
   // Targets state
   const [targetWaste, setTargetWaste] = useState('50')
   const [targetTasks, setTargetTasks] = useState('90')
@@ -113,16 +108,6 @@ export default function SettingsPage() {
     setLoadingConfig(false)
   }
 
-  /** Fetch GST-inclusive suppliers from the dedicated table */
-  async function fetchGstSuppliers() {
-    const supabase = createClient()
-    const { data } = await supabase
-      .from('gst_inclusive_suppliers')
-      .select('id, supplier_name')
-      .order('supplier_name')
-    setGstInclusiveSuppliers(data ?? [])
-  }
-
   /** Fetch Xero connection status from the server (queries xero_tokens via service role) */
   async function fetchXeroStatus() {
     setXeroStatusLoading(true)
@@ -163,7 +148,6 @@ export default function SettingsPage() {
       if (profile.role === 'owner') {
         fetchOwnerSettings()
         fetchXeroStatus()
-        fetchGstSuppliers()
       } else {
         setLoadingConfig(false)
       }
@@ -254,31 +238,6 @@ export default function SettingsPage() {
     setXeroConnected(false)
     setXeroLastSync(null)
     showToast('Xero disconnected', 'success')
-  }
-
-  /** Adds a supplier name to the gst_inclusive_suppliers table */
-  async function handleAddSupplier() {
-    const name = newSupplierInput.trim()
-    if (!name) { showToast('Enter a supplier name', 'error'); return }
-    if (gstInclusiveSuppliers.some(s => s.supplier_name.toLowerCase() === name.toLowerCase())) {
-      showToast('Supplier already in list', 'error'); return
-    }
-    setSavingSupplier(true)
-    const supabase = createClient()
-    const { error } = await supabase.from('gst_inclusive_suppliers').insert({ supplier_name: name })
-    setSavingSupplier(false)
-    if (error) { showToast(error.message, 'error'); return }
-    setNewSupplierInput('')
-    fetchGstSuppliers()
-    showToast('Supplier added', 'success')
-  }
-
-  /** Removes a supplier from the gst_inclusive_suppliers table by id */
-  async function handleRemoveSupplier(id: string) {
-    const supabase = createClient()
-    const { error } = await supabase.from('gst_inclusive_suppliers').delete().eq('id', id)
-    if (error) { showToast(error.message, 'error'); return }
-    fetchGstSuppliers()
   }
 
   /** Save performance targets */
@@ -628,53 +587,6 @@ export default function SettingsPage() {
                 )}
 
 
-                {/* GST-inclusive suppliers — stored in dedicated gst_inclusive_suppliers table */}
-                <div>
-                  <div className="mb-3">
-                    <p className="font-medium text-[#1A1A1A] text-sm">GST-Inclusive Suppliers</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Suppliers whose invoices show GST-inclusive totals. AI extraction will auto-detect this for known suppliers.
-                    </p>
-                  </div>
-
-                  {/* Current list */}
-                  {gstInclusiveSuppliers.length > 0 ? (
-                    <div className="space-y-2 mb-3">
-                      {gstInclusiveSuppliers.map(s => (
-                        <div key={s.id} className="flex items-center justify-between px-4 py-2.5 bg-[#FAF8F3] rounded-xl">
-                          <span className="text-sm text-[#1A1A1A]">{s.supplier_name}</span>
-                          <button
-                            onClick={() => handleRemoveSupplier(s.id)}
-                            className="text-red-400 text-sm font-medium ml-3 shrink-0"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 mb-3">No suppliers added yet.</p>
-                  )}
-
-                  {/* Add supplier */}
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newSupplierInput}
-                      onChange={e => setNewSupplierInput(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleAddSupplier()}
-                      placeholder="Supplier name (e.g. Ozone Coffee)"
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-sm focus:outline-none focus:border-[#296861]"
-                    />
-                    <button
-                      onClick={handleAddSupplier}
-                      disabled={savingSupplier || !newSupplierInput.trim()}
-                      className="px-4 py-2.5 rounded-xl bg-[#B8960C] text-white text-sm font-semibold disabled:opacity-40 whitespace-nowrap"
-                    >
-                      {savingSupplier ? '…' : '+ Add'}
-                    </button>
-                  </div>
-                </div>
               </div>
             </div>
 
