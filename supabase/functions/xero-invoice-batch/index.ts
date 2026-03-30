@@ -266,7 +266,8 @@ Deno.serve(async (_req: Request) => {
 
 function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown> {
   const taxType     = inv.tax_type as string | null
-  const lineAmounts = taxType === 'NOTAX' ? 'NOTAX' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
+  // Xero LineAmountTypes values: 'INCLUSIVE', 'EXCLUSIVE', 'NONE' (not 'NOTAX')
+  const lineAmounts = taxType === 'NOTAX' ? 'NONE' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
   const lineTaxType = taxType === 'NOTAX' ? 'NONE' : 'INPUT'
 
   const lineItems = (inv.line_items as Array<{
@@ -311,7 +312,7 @@ function buildXeroCsv(invoices: Record<string, unknown>[]): string {
 
   for (const inv of invoices) {
     const taxType    = inv.tax_type as string | null
-    const csvTaxType = taxType === 'NOTAX' ? 'GST Free Expenses' : 'GST on Expenses'
+    const csvTaxType = (taxType === 'NOTAX' || taxType === 'NONE') ? 'GST Free Expenses' : 'GST on Expenses'
 
     const lineItems = inv.line_items as Array<{
       description: string
