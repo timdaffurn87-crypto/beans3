@@ -123,12 +123,13 @@ Deno.serve(async (_req: Request) => {
 
     console.log(`xero-invoice-batch: processing café day ${cafeDay}`)
 
-    // Fetch all pending invoices for today's café day
+    // Fetch all pending AND previously-failed invoices for today's café day.
+    // Including 'failed' means the manual "Push to Xero" button acts as a retry.
     const { data: invoices, error: fetchError } = await supabase
       .from('invoices')
       .select('*')
       .eq('cafe_day', cafeDay)
-      .eq('xero_sync_status', 'pending')
+      .in('xero_sync_status', ['pending', 'failed'])
       .not('line_items', 'is', null)
 
     if (fetchError) throw new Error(`Failed to fetch invoices: ${fetchError.message}`)
