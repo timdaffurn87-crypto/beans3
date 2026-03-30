@@ -179,6 +179,7 @@ Deno.serve(async (_req: Request) => {
     let totalSynced = 0
     let totalFailed = 0
     const failedInvoiceIds: string[] = []
+    const failedErrors: Record<string, string> = {}
 
     // Push one invoice at a time so contact creation works per-supplier
     for (const inv of toSync) {
@@ -236,6 +237,7 @@ Deno.serve(async (_req: Request) => {
           .eq('id', inv.id)
 
         failedInvoiceIds.push(inv.id as string)
+        failedErrors[inv.id as string] = msg
         totalFailed++
       }
     }
@@ -250,7 +252,7 @@ Deno.serve(async (_req: Request) => {
       console.warn(`CSV export failed (non-fatal): ${csvErr instanceof Error ? csvErr.message : csvErr}`)
     }
 
-    const result = { success: true, cafe_day: cafeDay, synced: totalSynced, skipped: 0, failed: totalFailed, failed_ids: failedInvoiceIds }
+    const result = { success: true, cafe_day: cafeDay, synced: totalSynced, skipped: 0, failed: totalFailed, failed_ids: failedInvoiceIds, ...(totalFailed > 0 ? { failed_errors: failedErrors } : {}) }
     console.log('xero-invoice-batch complete:', result)
     return new Response(JSON.stringify(result), { headers: { 'Content-Type': 'application/json' } })
 
@@ -268,7 +270,7 @@ Deno.serve(async (_req: Request) => {
 
 /**
  * Maps a Beans invoice to a Xero ACCPAY bill payload.
- * Always sends LineAmountTypes=EXCLUSIVE — Xero applies the correct tax
+ * Always sends LineAmountTypes=Exclusive — Xero applies the correct tax
  * rate automatically based on the chart of accounts (account code).
  * We do not send ItemCode — supplier codes are not Xero inventory codes.
  */
@@ -288,7 +290,7 @@ function mapToXeroInvoice(inv: Record<string, unknown>, contactId: string): Reco
   return {
     Type:            'ACCPAY',
     Contact:         { ContactID: contactId },
-    LineAmountTypes: 'EXCLUSIVE',
+    LineAmountTypes: 'Exclusive',
     LineItems:       lineItems,
     CurrencyCode:    'AUD',
     Status:          'DRAFT',
