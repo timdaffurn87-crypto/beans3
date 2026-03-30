@@ -2,6 +2,8 @@
 // xero-invoice-batch — Supabase Edge Function
 // =============================================================================
 // Runs daily via Supabase cron at 05:00 UTC (15:00 AEST / 16:00 AEDT).
+// Also triggered manually via POST /api/xero/sync from the invoice page.
+//
 // Pulls all invoices with xero_sync_status = 'pending' for today's café day,
 // maps them to Xero ACCPAY bills, and posts them to the Xero Invoices API.
 //
@@ -23,49 +25,105 @@
 // =============================================================================
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { getValidXeroToken } from '../xero-token-refresh/index.ts'
 
 /** Maximum invoices per Xero API batch call */
 const BATCH_SIZE = 50
 
 // ─── Xero CSV column headers (exact order required for manual import) ─────────
 const XERO_CSV_HEADERS = [
-  '*ContactName',
-  'EmailAddress',
-  'POAddressLine1',
-  'POAddressLine2',
-  'POAddressLine3',
-  'POAddressLine4',
-  'POCity',
-  'PORegion',
-  'POPostalCode',
-  'POCountry',
-  '*InvoiceNumber',
-  '*InvoiceDate',
-  '*DueDate',
-  'InventoryItemCode',
-  'Description',
-  '*Quantity',
-  '*UnitAmount',
-  '*AccountCode',
-  '*TaxType',
-  'TrackingName1',
-  'TrackingOption1',
-  'TrackingName2',
-  'TrackingOption2',
+  '*ContactName', 'EmailAddress',
+  'POAddressLine1', 'POAddressLine2', 'POAddressLine3', 'POAddressLine4',
+  'POCity', 'PORegion', 'POPostalCode', 'POCountry',
+  '*InvoiceNumber', '*InvoiceDate', '*DueDate',
+  'InventoryItemCode', 'Description',
+  '*Quantity', '*UnitAmount', '*AccountCode', '*TaxType',
+  'TrackingName1', 'TrackingOption1', 'TrackingName2', 'TrackingOption2',
   'Currency',
 ]
 
-Deno.serve(async () => {
+// ─── Token refresh (inlined — edge functions cannot import sibling functions) ──
+
+/**
+ * Returns a valid Xero access token, refreshing it first if it expires
+ * within the next 5 minutes. Updates xero_tokens with the new tokens.
+ */
+async function getValidXeroToken(
+  supabase: ReturnType<typeof createClient>
+): Promise<{ access_token: string; tenant_id: string }> {
+  const { data: row, error } = await supabase
+    .from('xero_tokens')
+    .select('*')
+    .single()
+
+  if (error || !row) {
+    throw new Error('Xero not connected. Go to Settings → Xero Integration to connect your account.')
+  }
+
+  const expiresAt  = new Date(row.expires_at).getTime()
+  const fiveMin    = 5 * 60 * 1000
+  const needsRefresh = Date.now() >= expiresAt - fiveMin
+
+  if (!needsRefresh) {
+    return { access_token: row.access_token, tenant_id: row.tenant_id }
+  }
+
+  // Refresh the token
+  const clientId     = Deno.env.get('XERO_CLIENT_ID')!
+  const clientSecret = Deno.env.get('XERO_CLIENT_SECRET')!
+  const credentials  = btoa(`${clientId}:${clientSecret}`)
+
+  const res = await fetch('https://identity.xero.com/connect/token', {
+    method:  'POST',
+    headers: {
+      'Authorization': `Basic ${credentials}`,
+      'Content-Type':  'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type:    'refresh_token',
+      refresh_token: row.refresh_token,
+    }).toString(),
+  })
+
+  if (!res.ok) {
+    const body = await res.text()
+    throw new Error(`Token refresh failed: ${res.status} — ${body}`)
+  }
+
+  const tokens = await res.json()
+  const newExpiresAt = new Date(Date.now() + (tokens.expires_in as number) * 1000).toISOString()
+
+  // Xero rotates refresh tokens — always save the new one immediately
+  await supabase.from('xero_tokens').update({
+    access_token:  tokens.access_token,
+    refresh_token: tokens.refresh_token,
+    expires_at:    newExpiresAt,
+    updated_at:    new Date().toISOString(),
+  }).eq('id', row.id)
+
+  return { access_token: tokens.access_token, tenant_id: row.tenant_id }
+}
+
+// ─── Main handler ─────────────────────────────────────────────────────────────
+
+Deno.serve(async (req: Request) => {
+  // Verify caller passes the service role key as a bearer token
+  const authHeader     = req.headers.get('Authorization') ?? ''
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  if (authHeader !== `Bearer ${serviceRoleKey}`) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    })
+  }
+
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    serviceRoleKey,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
   try {
-    // Compute today's café day date in AEST (UTC+10)
-    // At 05:00 UTC the Australian date is always the same as the UTC date
+    // Compute today's café day date in AEST (UTC+10 fixed offset)
     const aestNow = new Date(Date.now() + 10 * 60 * 60 * 1000)
     const cafeDay = aestNow.toISOString().split('T')[0]
 
@@ -87,7 +145,7 @@ Deno.serve(async () => {
       })
     }
 
-    // Separate invoices that need GST review (flagged + no tax_type)
+    // Separate invoices that need GST review
     const toSync = invoices.filter(inv =>
       !(inv.gst_flagged === true && inv.tax_type === null) &&
       Array.isArray(inv.line_items) && inv.line_items.length > 0
@@ -99,30 +157,31 @@ Deno.serve(async () => {
     }
 
     if (toSync.length === 0) {
-      return new Response(JSON.stringify({ success: true, synced: 0, skipped: skippedFlagged.length, failed: 0 }), {
-        headers: { 'Content-Type': 'application/json' },
-      })
+      return new Response(
+        JSON.stringify({ success: true, synced: 0, skipped: skippedFlagged.length, failed: 0 }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
     }
 
     // Get a valid Xero access token (refreshes automatically if needed)
-    const { access_token, tenant_id } = await getValidXeroToken()
+    const { access_token, tenant_id } = await getValidXeroToken(supabase)
 
     let totalSynced = 0
     let totalFailed = 0
     const failedInvoiceIds: string[] = []
 
-    // ── JSON API posting (primary sync mechanism) ──────────────────────────
+    // ── JSON API posting ───────────────────────────────────────────────────
     for (let i = 0; i < toSync.length; i += BATCH_SIZE) {
-      const batch = toSync.slice(i, i + BATCH_SIZE)
+      const batch       = toSync.slice(i, i + BATCH_SIZE)
       const xeroInvoices = batch.map(inv => mapToXeroInvoice(inv))
 
       const res = await fetch('https://api.xero.com/api.xro/2.0/Invoices', {
-        method: 'POST',
+        method:  'POST',
         headers: {
-          'Authorization': `Bearer ${access_token}`,
+          'Authorization':  `Bearer ${access_token}`,
           'Xero-Tenant-Id': tenant_id,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
+          'Content-Type':   'application/json',
+          'Accept':         'application/json',
         },
         body: JSON.stringify({ Invoices: xeroInvoices }),
       })
@@ -140,17 +199,15 @@ Deno.serve(async () => {
         continue
       }
 
-      const data = await res.json()
-      const returnedInvoices = data?.Invoices ?? [] as Array<{
+      const data             = await res.json()
+      const returnedInvoices = (data?.Invoices ?? []) as Array<{
         InvoiceID: string
         HasErrors: boolean
         ValidationErrors?: Array<{ Message: string }>
-        Status: string
       }>
 
-      // Match returned invoices to our batch by position
       for (let j = 0; j < batch.length; j++) {
-        const inv = batch[j]
+        const inv      = batch[j]
         const returned = returnedInvoices[j]
 
         if (!returned || returned.HasErrors) {
@@ -165,8 +222,8 @@ Deno.serve(async () => {
           await supabase.from('invoices')
             .update({
               xero_sync_status: 'synced',
-              xero_invoice_id: returned.InvoiceID,
-              xero_synced_at: new Date().toISOString(),
+              xero_invoice_id:  returned.InvoiceID,
+              xero_synced_at:   new Date().toISOString(),
             })
             .eq('id', inv.id)
           totalSynced++
@@ -174,33 +231,27 @@ Deno.serve(async () => {
       }
     }
 
-    // ── CSV export (audit / manual import backup) ─────────────────────────
-    // Generate a Xero-format CSV with exact headers and store to Supabase Storage.
-    // This is a backup — the primary sync already happened above via the JSON API.
+    // ── CSV export (audit backup) ──────────────────────────────────────────
     try {
       const csvContent = buildXeroCsv(toSync)
-      const csvBytes = new TextEncoder().encode(csvContent)
+      const csvBytes   = new TextEncoder().encode(csvContent)
 
       await supabase.storage
         .from('xero-csv-exports')
-        .upload(`${cafeDay}.csv`, csvBytes, {
-          contentType: 'text/csv',
-          upsert: true,       // overwrite if rerun for the same day
-        })
+        .upload(`${cafeDay}.csv`, csvBytes, { contentType: 'text/csv', upsert: true })
 
       console.log(`xero-invoice-batch: CSV saved to xero-csv-exports/${cafeDay}.csv`)
     } catch (csvErr) {
-      // Non-fatal — log but don't fail the whole function
       const msg = csvErr instanceof Error ? csvErr.message : String(csvErr)
       console.warn(`xero-invoice-batch: CSV export failed (non-fatal): ${msg}`)
     }
 
     const result = {
-      success: true,
-      cafe_day: cafeDay,
-      synced: totalSynced,
-      skipped: skippedFlagged.length,
-      failed: totalFailed,
+      success:    true,
+      cafe_day:   cafeDay,
+      synced:     totalSynced,
+      skipped:    skippedFlagged.length,
+      failed:     totalFailed,
       failed_ids: failedInvoiceIds,
     }
     console.log('xero-invoice-batch complete:', result)
@@ -218,17 +269,6 @@ Deno.serve(async () => {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/**
- * Maps a Beans invoice row to the Xero ACCPAY invoice JSON format.
- *
- * GST mapping (invoice-level tax_type → Xero fields):
- *   INCLUSIVE → LineAmountTypes=INCLUSIVE, each line TaxType=INPUT
- *   EXCLUSIVE → LineAmountTypes=EXCLUSIVE, each line TaxType=INPUT
- *   NOTAX     → LineAmountTypes=NOTAX,     each line TaxType=NONE
- *
- * InventoryItemCode is included per line item when set, allowing Xero to
- * auto-fill account codes and descriptions from the item master.
- */
 function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown> {
   const taxType     = inv.tax_type as string | null
   const lineAmounts = taxType === 'NOTAX' ? 'NOTAX' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
@@ -242,41 +282,28 @@ function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown>
     inventory_item_code?: string
   }>).map(item => ({
     Description: item.description,
-    Quantity: item.quantity,
-    UnitAmount: item.unit_amount,
+    Quantity:    item.quantity,
+    UnitAmount:  item.unit_amount,
     AccountCode: item.account_code || '310',
-    TaxType: lineTaxType,
-    // Only include ItemCode if the field has a non-empty value
+    TaxType:     lineTaxType,
     ...(item.inventory_item_code?.trim() ? { ItemCode: item.inventory_item_code.trim() } : {}),
   }))
 
   return {
-    Type: 'ACCPAY',
-    Contact: { Name: inv.supplier_name },
-    // EmailAddress is optional — only include if present
-    ...(inv.supplier_email ? { EmailAddress: inv.supplier_email } : {}),
-    ...(inv.reference_number ? { InvoiceNumber: inv.reference_number } : {}),
-    ...(inv.invoice_date    ? { Date: inv.invoice_date }             : {}),
-    ...(inv.due_date        ? { DueDate: inv.due_date }              : {}),
+    Type:            'ACCPAY',
+    Contact:         { Name: inv.supplier_name },
+    ...(inv.supplier_email    ? { EmailAddress:  inv.supplier_email }    : {}),
+    ...(inv.reference_number  ? { InvoiceNumber: inv.reference_number }  : {}),
+    ...(inv.invoice_date      ? { Date:          inv.invoice_date }      : {}),
+    ...(inv.due_date          ? { DueDate:       inv.due_date }          : {}),
     LineAmountTypes: lineAmounts,
-    LineItems: lineItems,
-    CurrencyCode: 'AUD',
+    LineItems:       lineItems,
+    CurrencyCode:    'AUD',
+    Status:          'DRAFT',
   }
 }
 
-/**
- * Builds a Xero Bills CSV string (for manual import / audit backup).
- *
- * The CSV is "flat" — one row per line item, with invoice header fields
- * repeated on every row. This matches the Xero Bills import template format.
- *
- * Column order is fixed to match the Xero import spec exactly.
- * Tax type values use Xero's rate-name strings, not the API enum values:
- *   INPUT → "GST on Expenses"
- *   NONE  → "GST Free Expenses"
- */
 function buildXeroCsv(invoices: Record<string, unknown>[]): string {
-  /** Wraps a value in quotes if it contains a comma, newline, or quote */
   function csvCell(value: string | number | null | undefined): string {
     const str = value === null || value === undefined ? '' : String(value)
     if (str.includes(',') || str.includes('"') || str.includes('\n')) {
@@ -289,7 +316,6 @@ function buildXeroCsv(invoices: Record<string, unknown>[]): string {
 
   for (const inv of invoices) {
     const taxType    = inv.tax_type as string | null
-    // Map to Xero CSV tax rate names
     const csvTaxType = taxType === 'NOTAX' ? 'GST Free Expenses' : 'GST on Expenses'
 
     const lineItems = inv.line_items as Array<{
@@ -301,33 +327,22 @@ function buildXeroCsv(invoices: Record<string, unknown>[]): string {
     }>
 
     for (const item of lineItems) {
-      const row = [
-        csvCell(inv.supplier_name as string),       // *ContactName
-        csvCell(inv.supplier_email as string),       // EmailAddress
-        '',                                          // POAddressLine1
-        '',                                          // POAddressLine2
-        '',                                          // POAddressLine3
-        '',                                          // POAddressLine4
-        '',                                          // POCity
-        '',                                          // PORegion
-        '',                                          // POPostalCode
-        '',                                          // POCountry
-        csvCell(inv.reference_number as string),     // *InvoiceNumber
-        csvCell(inv.invoice_date as string),         // *InvoiceDate
-        csvCell(inv.due_date as string),             // *DueDate
-        csvCell(item.inventory_item_code || ''),     // InventoryItemCode
-        csvCell(item.description),                   // Description
-        csvCell(item.quantity),                      // *Quantity
-        csvCell(item.unit_amount),                   // *UnitAmount
-        csvCell(item.account_code || '310'),         // *AccountCode
-        csvCell(csvTaxType),                         // *TaxType
-        '',                                          // TrackingName1
-        '',                                          // TrackingOption1
-        '',                                          // TrackingName2
-        '',                                          // TrackingOption2
-        'AUD',                                       // Currency
-      ]
-      rows.push(row.join(','))
+      rows.push([
+        csvCell(inv.supplier_name as string),
+        csvCell(inv.supplier_email as string),
+        '', '', '', '', '', '', '', '',
+        csvCell(inv.reference_number as string),
+        csvCell(inv.invoice_date as string),
+        csvCell(inv.due_date as string),
+        csvCell(item.inventory_item_code || ''),
+        csvCell(item.description),
+        csvCell(item.quantity),
+        csvCell(item.unit_amount),
+        csvCell(item.account_code || '310'),
+        csvCell(csvTaxType),
+        '', '', '', '',
+        'AUD',
+      ].join(','))
     }
   }
 
