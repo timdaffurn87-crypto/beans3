@@ -368,8 +368,8 @@ export default function InvoicePage() {
       }
       // Refresh the invoice list to show updated sync statuses
       fetchTodayInvoices()
-    } catch {
-      showToast('Xero sync failed — check your connection', 'error')
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Xero sync failed — check your connection', 'error')
     } finally {
       setXeroSyncing(false)
     }
