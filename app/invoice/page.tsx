@@ -31,9 +31,9 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** A blank line item with Xero defaults */
+/** A blank line item with Xero defaults — most café items are GST-free food */
 function blankLineItem(): LineItem {
-  return { description: '', quantity: 1, unit_amount: 0, account_code: '300', inventory_item_code: '' }
+  return { description: '', quantity: 1, unit_amount: 0, account_code: '300', inventory_item_code: '', tax_type: 'NONE' }
 }
 
 // ─── Design tokens (Design tokens for this screen) ─────────────────────
@@ -209,6 +209,7 @@ export default function InvoicePage() {
           unit_amount:          item.unit_amount          ?? 0,
           account_code:         item.account_code         || '300',
           inventory_item_code:  item.inventory_item_code  || '',
+          tax_type:             item.tax_type             || 'NONE',
         })))
       } else {
         setLineItems([blankLineItem()])
@@ -799,8 +800,8 @@ export default function InvoicePage() {
 
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { label: 'Qty',          value: item.quantity,    onChange: (v: number) => updateLineItem(index, 'quantity', v),    step: '1',    min: '0' },
-                        { label: 'Unit (ex-GST)', value: item.unit_amount, onChange: (v: number) => updateLineItem(index, 'unit_amount', v), step: '0.01', min: '0' },
+                        { label: 'Qty',        value: item.quantity,    onChange: (v: number) => updateLineItem(index, 'quantity', v),    step: '1',    min: '0' },
+                        { label: 'Unit Price',  value: item.unit_amount, onChange: (v: number) => updateLineItem(index, 'unit_amount', v), step: '0.01', min: '0' },
                       ].map(f => (
                         <div key={f.label} className="flex flex-col gap-0.5">
                           <label className="text-xs" style={{ color: CI.tertiary }}>{f.label}</label>
@@ -819,19 +820,35 @@ export default function InvoicePage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { label: 'Account Code', value: item.account_code,        onChange: (v: string) => updateLineItem(index, 'account_code', v),        placeholder: '310'         },
-                        { label: 'Item Code (opt)', value: item.inventory_item_code, onChange: (v: string) => updateLineItem(index, 'inventory_item_code', v), placeholder: 'SKU or blank' },
-                      ].map(f => (
-                        <div key={f.label} className="flex flex-col gap-0.5">
-                          <label className="text-xs" style={{ color: CI.tertiary }}>{f.label}</label>
-                          <input type="text" value={f.value} onChange={e => f.onChange(e.target.value)}
-                            placeholder={f.placeholder}
-                            className="px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2"
-                            style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
-                        </div>
-                      ))}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-xs" style={{ color: CI.tertiary }}>Account Code</label>
+                        <input type="text" value={item.account_code} onChange={e => updateLineItem(index, 'account_code', e.target.value)}
+                          placeholder="310"
+                          className="px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2"
+                          style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-xs" style={{ color: CI.tertiary }}>Item Code</label>
+                        <input type="text" value={item.inventory_item_code} onChange={e => updateLineItem(index, 'inventory_item_code', e.target.value)}
+                          placeholder="optional"
+                          className="px-3 py-2 rounded-lg border bg-white text-sm focus:outline-none focus:ring-2"
+                          style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
+                      </div>
+                      <div className="flex flex-col gap-0.5">
+                        <label className="text-xs" style={{ color: CI.tertiary }}>GST</label>
+                        <button
+                          type="button"
+                          onClick={() => updateLineItem(index, 'tax_type', item.tax_type === 'INPUT2' ? 'NONE' : 'INPUT2')}
+                          className="px-3 py-2 rounded-lg border text-sm font-semibold text-center transition-colors"
+                          style={{
+                            borderColor: item.tax_type === 'INPUT2' ? CI.primary : CI.outlineVar,
+                            backgroundColor: item.tax_type === 'INPUT2' ? 'rgba(41,104,97,0.1)' : 'white',
+                            color: item.tax_type === 'INPUT2' ? CI.primary : CI.tertiary,
+                          }}>
+                          {item.tax_type === 'INPUT2' ? '10% GST' : 'No GST'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -839,7 +856,7 @@ export default function InvoicePage() {
 
               {lineItems.length > 0 && (
                 <div className="flex items-center justify-between pt-3 mt-2 border-t" style={{ borderColor: CI.outlineVar + '40' }}>
-                  <span className="text-sm font-medium" style={{ color: CI.tertiary }}>Invoice Total (ex-GST)</span>
+                  <span className="text-sm font-medium" style={{ color: CI.tertiary }}>Invoice Total (inc. GST)</span>
                   <span className="text-xl font-bold"
                     style={{ fontFamily: 'var(--font-newsreader, Georgia, serif)', color: CI.onSurface }}>
                     {formatCurrency(lineItems.reduce((s, i) => s + i.quantity * i.unit_amount, 0))}

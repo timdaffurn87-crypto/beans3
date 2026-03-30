@@ -6,10 +6,9 @@
  *
  * Strategy:
  * 1. Load Xero reference data (inventory items + chart of accounts) from /data/ CSVs
- * 2. Fetch the GST inclusive supplier list from Supabase
- * 3. Build a detailed system prompt injecting both reference sets
- * 4. Call Claude (primary) or Gemini (fallback)
- * 5. Post-process: override tax_type if supplier is in the GST inclusive list
+ * 2. Build a detailed system prompt injecting reference sets
+ * 3. Call Claude (primary) or Gemini (fallback)
+ * 4. Return per-line tax_type (NONE for GST-free, INPUT2 for GST items)
  *
  * Auth: requires a valid Supabase session cookie.
  * API keys: read from the `settings` table (not env vars) using service role.
@@ -27,11 +26,9 @@ import { inventoryItems, chartOfAccounts } from '@/lib/invoiceReferenceData'
  * Builds the AI extraction system prompt, injecting:
  * - The full inventory item list (for exact ItemCode + AccountCode matching)
  * - The chart of accounts (for fallback account selection)
- * - The GST inclusive supplier list (for automatic tax_type override)
- *
- * Keeping reference data as compact JSON minimises token usage.
+ * AI returns per-line tax_type: "NONE" (GST-free) or "INPUT2" (GST on Expenses)
  */
-function buildExtractionPrompt(gstSuppliers: string[]): string {
+function buildExtractionPrompt(): string {
   // Minify reference arrays — compact JSON without extra spaces
   const inventoryJson = JSON.stringify(
     inventoryItems.map(i => ({
@@ -51,8 +48,6 @@ function buildExtractionPrompt(gstSuppliers: string[]): string {
     }))
   )
 
-  const suppliersJson = JSON.stringify(gstSuppliers)
-
   return `You are an expert Xero Accounts Payable data extraction bot for Cocoa Café.
 
 I am providing you with our exact Xero Inventory Item list and Chart of Accounts.
@@ -63,10 +58,16 @@ ${inventoryJson}
 CHART OF ACCOUNTS — expense/cost accounts only (fields: c=Code, n=Name, t=TaxCode):
 ${coaJson}
 
-GST INCLUSIVE SUPPLIERS — invoices from these suppliers have GST already included in all prices:
-${suppliersJson}
 
 INSTRUCTIONS:
+
+This is a café in Australia. All amounts on invoices are GST-inclusive (tax included in the price).
+LineAmountTypes will always be "Inclusive" in Xero — you must set the correct TaxType PER LINE ITEM.
+
+GST RULES FOR AUSTRALIAN CAFÉS:
+- Most food and basic beverages are GST-FREE → tax_type: "NONE"
+- GST APPLIES (10%) to: alcohol, equipment, non-food supplies, some packaging, cleaning chemicals, carbonated drinks, confectionery → tax_type: "INPUT2"
+- When in doubt for food/beverage items, default to "NONE" (GST-free)
 
 For each line item on the invoice:
 
@@ -75,21 +76,15 @@ For each line item on the invoice:
 2. If an inventory match is found:
    - Set inventory_item_code to the exact "c" (ItemCode) value
    - Set account_code to the exact "a" (PurchasesAccount) value
-   - Note the "t" (PurchasesTaxRate) — use it to inform the invoice-level tax_type
+   - Check the "t" (PurchasesTaxRate) field — if it contains "GST" or "INPUT2", set tax_type to "INPUT2"; if it contains "Free" or "NONE", set tax_type to "NONE"
 
 3. If no inventory match is found:
    - Leave inventory_item_code as empty string — do NOT invent a code
    - Select the most appropriate account_code from the Chart of Accounts based on the expense category
    - Prefer account 310 (Cost of Goods Sold) for food/beverage supplies, 408 (Cleaning) for cleaning products, 429 (General Expenses) when unsure
+   - Determine tax_type per the GST rules above based on what the item actually is
 
-4. GST treatment — determine at the INVOICE level (applies to all line items):
-   - If the supplier name (exactly as on invoice) appears in the GST Inclusive Suppliers list → set tax_type to "INCLUSIVE"
-   - If the invoice shows a separate GST line item (e.g. "GST $12.50" broken out) → set tax_type to "EXCLUSIVE"
-   - If the invoice shows "incl. GST", "GST included", or similar on the total → set tax_type to "INCLUSIVE"
-   - If the invoice explicitly shows items as GST-free, zero-rated, or exempt → set tax_type to "NOTAX"
-   - If GST treatment cannot be determined confidently → set tax_type to null and gst_flagged to true
-
-5. Extract invoice header fields:
+4. Extract invoice header fields:
    - supplier_name: exactly as shown on the invoice
    - supplier_email: if shown, otherwise null
    - invoice_number: the supplier's invoice/reference number
@@ -97,12 +92,13 @@ For each line item on the invoice:
    - due_date: YYYY-MM-DD format, null if not shown
    - confidence: "high" (all fields clear), "medium" (some inference needed), "low" (poor image / much guesswork)
 
-6. Extract per line item:
+5. Extract per line item:
    - description: as printed on invoice
    - quantity: numeric (default 1 if not itemised)
-   - unit_amount: price per unit as shown (do not adjust for GST)
+   - unit_amount: price per unit AS SHOWN on the invoice (GST-inclusive — do not adjust)
    - account_code: from inventory match or COA lookup (string)
    - inventory_item_code: exact ItemCode from inventory match, or empty string
+   - tax_type: "NONE" for GST-free items, "INPUT2" for GST-applicable items (per the rules above)
 
 Return ONLY a valid JSON object using this exact structure — no preamble, no markdown, no explanation:
 {
@@ -111,8 +107,6 @@ Return ONLY a valid JSON object using this exact structure — no preamble, no m
   "invoice_number": "string or null",
   "invoice_date": "YYYY-MM-DD or null",
   "due_date": "YYYY-MM-DD or null",
-  "tax_type": "INCLUSIVE" | "EXCLUSIVE" | "NOTAX" | null,
-  "gst_flagged": true | false,
   "confidence": "high" | "medium" | "low",
   "line_items": [
     {
@@ -120,7 +114,8 @@ Return ONLY a valid JSON object using this exact structure — no preamble, no m
       "quantity": number,
       "unit_amount": number,
       "account_code": "string",
-      "inventory_item_code": "string"
+      "inventory_item_code": "string",
+      "tax_type": "NONE" | "INPUT2"
     }
   ]
 }`
@@ -249,37 +244,6 @@ async function extractWithGemini(
   return parsed
 }
 
-// ─── GST supplier lookup ─────────────────────────────────────────────────────
-
-/**
- * Fetches all supplier names from the gst_inclusive_suppliers table.
- * Returns an empty array if the table is empty or the query fails.
- * These names are injected into the AI prompt AND used for post-extraction override.
- */
-async function fetchGstInclusiveSuppliers(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  adminSupabase: { from: (table: string) => any }
-): Promise<string[]> {
-  const { data } = await adminSupabase
-    .from('gst_inclusive_suppliers')
-    .select('supplier_name')
-
-  if (!data || data.length === 0) return []
-  return data.map((row: { supplier_name: string }) => row.supplier_name)
-}
-
-/**
- * Returns true if the given supplier name matches any entry in the
- * GST inclusive suppliers list (case-insensitive, trimmed).
- */
-function isGstInclusiveSupplier(
-  supplierName: string,
-  gstSuppliers: string[]
-): boolean {
-  const normalised = supplierName.trim().toLowerCase()
-  return gstSuppliers.some(s => s.trim().toLowerCase() === normalised)
-}
-
 // ─── Route handler ───────────────────────────────────────────────────────────
 
 /**
@@ -289,11 +253,9 @@ function isGstInclusiveSupplier(
  *
  * 1. Authenticates the caller via Supabase session
  * 2. Loads Claude/Gemini API keys from the settings table
- * 3. Fetches GST inclusive suppliers from Supabase
- * 4. Builds the extraction prompt with reference data injected
- * 5. Calls Claude (falls back to Gemini if Claude unavailable or fails)
- * 6. Post-processes: overrides tax_type to INCLUSIVE if supplier is known
- * 7. Returns the structured invoice JSON
+ * 3. Builds the extraction prompt with Xero reference data
+ * 4. Calls Claude (falls back to Gemini if Claude unavailable or fails)
+ * 5. Returns the structured invoice JSON with per-line tax_type
  */
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -325,15 +287,12 @@ export async function POST(request: Request) {
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  // Fetch AI API keys and GST inclusive supplier list in parallel
-  const [keyRows, gstSuppliers] = await Promise.all([
-    adminSupabase
-      .from('settings')
-      .select('key, value')
-      .in('key', ['claude_api_key', 'gemini_api_key'])
-      .then(({ data }) => data ?? []),
-    fetchGstInclusiveSuppliers(adminSupabase),
-  ])
+  // Fetch AI API keys
+  const keyRows = await adminSupabase
+    .from('settings')
+    .select('key, value')
+    .in('key', ['claude_api_key', 'gemini_api_key'])
+    .then(({ data }: { data: { key: string; value: string }[] | null }) => data ?? [])
 
   const keys: Record<string, string> = {}
   for (const row of keyRows) keys[row.key] = row.value
@@ -361,7 +320,7 @@ export async function POST(request: Request) {
   }
 
   // Build the prompt with reference data injected
-  const prompt = buildExtractionPrompt(gstSuppliers)
+  const prompt = buildExtractionPrompt()
 
   let result: Record<string, unknown>
 
@@ -393,13 +352,6 @@ export async function POST(request: Request) {
       const msg = err instanceof Error ? err.message : String(err)
       return NextResponse.json({ error: `Gemini API error: ${msg}` }, { status: 502 })
     }
-  }
-
-  // Post-extraction safety net: if the supplier is in our GST inclusive list,
-  // force tax_type to INCLUSIVE even if the model missed it.
-  const supplierName = (result.supplier_name as string) || ''
-  if (supplierName && isGstInclusiveSupplier(supplierName, gstSuppliers)) {
-    result = { ...result, tax_type: 'INCLUSIVE', gst_flagged: false }
   }
 
   return NextResponse.json(result)

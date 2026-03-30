@@ -280,17 +280,19 @@ function mapToXeroInvoice(inv: Record<string, unknown>, contactId: string): Reco
     quantity: number
     unit_amount: number
     account_code?: string
+    tax_type?: string
   }>).map(item => ({
     Description: item.description,
     Quantity:    item.quantity,
     UnitAmount:  item.unit_amount,
     AccountCode: item.account_code || '310',
+    TaxType:     item.tax_type || 'NONE',  // NONE = GST-free, INPUT2 = GST on Expenses
   }))
 
   return {
     Type:            'ACCPAY',
     Contact:         { ContactID: contactId },
-    LineAmountTypes: 'Exclusive',
+    LineAmountTypes: 'Inclusive',  // amounts already include GST
     LineItems:       lineItems,
     CurrencyCode:    'AUD',
     Status:          'DRAFT',

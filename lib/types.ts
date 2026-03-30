@@ -96,9 +96,10 @@ export interface Invoice {
 export interface LineItem {
   description: string
   quantity: number
-  unit_amount: number       // ex-GST price per unit — maps to Xero UnitAmount
-  account_code: string      // default "300" (COGS) — maps to Xero AccountCode
+  unit_amount: number          // GST-inclusive price per unit — maps to Xero UnitAmount
+  account_code: string         // default "300" (COGS) — maps to Xero AccountCode
   inventory_item_code: string  // optional — maps to Xero InventoryItemCode
+  tax_type: string             // "NONE" (GST-free) or "INPUT2" (GST on Expenses) — maps to Xero TaxType per line
 }
 
 export interface Recipe {
