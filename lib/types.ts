@@ -93,13 +93,29 @@ export interface Invoice {
   gst_flagged: boolean               // true when AI cannot determine GST treatment
 }
 
+export type TaxType = 'NONE' | 'INPUT2' | 'BASEXCLUDED'
+
 export interface LineItem {
   description: string
   quantity: number
   unit_amount: number          // GST-inclusive price per unit — maps to Xero UnitAmount
   account_code: string         // default "300" (COGS) — maps to Xero AccountCode
   inventory_item_code: string  // optional — maps to Xero InventoryItemCode
-  tax_type: string             // "NONE" (GST-free) or "INPUT2" (GST on Expenses) — maps to Xero TaxType per line
+  tax_type: TaxType            // "NONE" (GST-free), "INPUT2" (GST on Expenses), "BASEXCLUDED" (outside BAS)
+}
+
+export interface InventoryItem {
+  id: string
+  name: string
+  supplier_name: string | null
+  unit_of_measure: string
+  unit_price: number
+  default_tax_type: TaxType
+  xero_account_code: string
+  xero_inventory_item_code: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export interface Recipe {
@@ -119,6 +135,7 @@ export interface Ingredient {
   name: string
   quantity: string
   unit: string
+  inventory_item_id?: string   // optional link to inventory_items for price sync
 }
 
 export interface EODReport {

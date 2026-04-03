@@ -15,6 +15,15 @@ interface WasteLogWithProfile extends WasteLog {
   profiles: Pick<Profile, 'full_name'> | null
 }
 
+/** Combined item for the waste dropdown — can be a menu item or an inventory item */
+interface WasteDropdownItem {
+  id: string
+  name: string
+  cost_price: number
+  source: 'menu' | 'inventory'   // which table this came from
+  category?: string
+}
+
 /** Reasons a waste event can have */
 const WASTE_REASONS = [
   'Expired',
@@ -33,7 +42,8 @@ export default function WastePage() {
   const router = useRouter()
   const { showToast } = useToast()
 
-  // Menu items for the dropdown
+  // Combined dropdown items (menu items + inventory items)
+  const [dropdownItems, setDropdownItems] = useState<WasteDropdownItem[]>([])
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
 
   // Form state
@@ -54,16 +64,49 @@ export default function WastePage() {
     if (!loading && !profile) router.push('/login')
   }, [profile, loading, router])
 
-  /** Load all active menu items for the dropdown */
+  /** Load all active menu items + inventory items for the waste dropdown */
   async function fetchMenuItems() {
     const supabase = createClient()
-    const { data } = await supabase
+
+    // Fetch menu items (finished products like "Flat White")
+    const { data: menuData } = await supabase
       .from('menu_items')
       .select('*')
       .eq('is_active', true)
       .order('category')
       .order('name')
-    setMenuItems(data ?? [])
+    setMenuItems(menuData ?? [])
+
+    // Fetch inventory items (raw ingredients from invoices like "Arabica Beans 1kg")
+    const { data: inventoryData } = await supabase
+      .from('inventory_items')
+      .select('id, name, unit_price, supplier_name')
+      .eq('is_active', true)
+      .order('name')
+
+    type InvRow = { id: string; name: string; unit_price: number; supplier_name: string | null }
+
+    // Combine into a single dropdown list — menu items first, then inventory items
+    const combined: WasteDropdownItem[] = [
+      ...(menuData ?? []).map((m: MenuItem) => ({
+        id: m.id,
+        name: m.name,
+        cost_price: m.cost_price,
+        source: 'menu' as const,
+        category: m.category,
+      })),
+      ...((inventoryData as InvRow[] | null) ?? [])
+        // Exclude inventory items whose name already exists in menu items (avoid duplicates)
+        .filter(inv => !(menuData ?? []).some((m: MenuItem) => m.name.toLowerCase() === inv.name.toLowerCase()))
+        .map(inv => ({
+          id: inv.id,
+          name: inv.name,
+          cost_price: inv.unit_price,
+          source: 'inventory' as const,
+          category: inv.supplier_name ? `Inventory · ${inv.supplier_name}` : 'Inventory',
+        })),
+    ]
+    setDropdownItems(combined)
   }
 
   /** Fetch today's waste log entries with staff names */
@@ -88,9 +131,9 @@ export default function WastePage() {
     }
   }, [profile])
 
-  /** When a menu item is selected from the dropdown, update related state */
+  /** When an item is selected from the dropdown, update related state */
   function handleItemSelect(id: string) {
-    const item = menuItems.find(m => m.id === id)
+    const item = dropdownItems.find(d => d.id === id)
     if (!item) {
       setSelectedItemId('')
       setSelectedItemName('')
@@ -114,9 +157,14 @@ export default function WastePage() {
     const cafeDay = getCurrentCafeDay()
     const totalCost = qty * selectedCostPrice
 
+    // Determine whether the selected item is from menu_items or inventory_items
+    const selectedDropdownItem = dropdownItems.find(d => d.id === selectedItemId)
+    const isInventoryItem = selectedDropdownItem?.source === 'inventory'
+
     const { error } = await supabase.from('waste_logs').insert({
       staff_id: profile.id,
-      menu_item_id: selectedItemId,
+      menu_item_id: isInventoryItem ? null : selectedItemId,
+      inventory_item_id: isInventoryItem ? selectedItemId : null,
       item_name: selectedItemName,
       quantity: qty,
       unit_cost: selectedCostPrice,
@@ -161,7 +209,7 @@ export default function WastePage() {
   // Computed values
   const qty           = parseInt(quantity, 10) || 0
   const estimatedLoss = qty * selectedCostPrice
-  const categories    = Array.from(new Set(menuItems.map(m => m.category)))
+  const categories    = Array.from(new Set(dropdownItems.map(d => d.category ?? 'other')))
   const wasteTotal    = wasteLog.reduce((sum, w) => sum + w.total_cost, 0)
 
   return (
@@ -212,11 +260,11 @@ export default function WastePage() {
               <option value="">Select an item…</option>
               {categories.map(cat => (
                 <optgroup key={cat} label={cat.charAt(0).toUpperCase() + cat.slice(1)}>
-                  {menuItems
-                    .filter(m => m.category === cat)
-                    .map(m => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} — {formatCurrency(m.sell_price)}
+                  {dropdownItems
+                    .filter(d => (d.category ?? 'other') === cat)
+                    .map(d => (
+                      <option key={d.id} value={d.id}>
+                        {d.name} — {formatCurrency(d.cost_price)}{d.source === 'inventory' ? ' (inv)' : ''}
                       </option>
                     ))}
                 </optgroup>

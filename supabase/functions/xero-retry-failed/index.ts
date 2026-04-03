@@ -110,34 +110,36 @@ Deno.serve(async () => {
   }
 })
 
+/**
+ * Maps a Beans invoice to a Xero ACCPAY bill payload.
+ * Sends LineAmountTypes=Inclusive — all amounts include GST where applicable.
+ * Each line carries its own TaxType: INPUT2 (GST), NONE (GST-free), or BASEXCLUDED.
+ */
 function mapToXeroInvoice(inv: Record<string, unknown>): Record<string, unknown> {
-  const taxType     = inv.tax_type as string | null
-  const lineAmounts = taxType === 'NOTAX' ? 'NOTAX' : taxType === 'INCLUSIVE' ? 'INCLUSIVE' : 'EXCLUSIVE'
-  const lineTaxType = taxType === 'NOTAX' ? 'NONE' : 'INPUT'
-
   const lineItems = (inv.line_items as Array<{
     description: string
     quantity: number
     unit_amount: number
     account_code?: string
     inventory_item_code?: string
+    tax_type?: string
   }>).map(item => ({
     Description: item.description,
     Quantity: item.quantity,
     UnitAmount: item.unit_amount,
-    AccountCode: item.account_code || '300',
-    TaxType: lineTaxType,
-    ...(item.inventory_item_code ? { ItemCode: item.inventory_item_code } : {}),
+    AccountCode: item.account_code || '310',
+    TaxType: item.tax_type || 'NONE',
   }))
 
   return {
     Type: 'ACCPAY',
     Contact: { Name: inv.supplier_name },
-    ...(inv.reference_number ? { InvoiceNumber: inv.reference_number } : {}),
+    ...(inv.reference_number ? { InvoiceNumber: inv.reference_number, Reference: inv.reference_number } : {}),
     ...(inv.invoice_date ? { Date: inv.invoice_date } : {}),
     ...(inv.due_date ? { DueDate: inv.due_date } : {}),
-    LineAmountTypes: lineAmounts,
+    LineAmountTypes: 'Inclusive',
     LineItems: lineItems,
     CurrencyCode: 'AUD',
+    Status: 'DRAFT',
   }
 }

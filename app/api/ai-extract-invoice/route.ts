@@ -22,11 +22,20 @@ import { inventoryItems, chartOfAccounts } from '@/lib/invoiceReferenceData'
 
 // ─── Prompt builder ──────────────────────────────────────────────────────────
 
+/** Learned tax type overrides from previous invoices (populated before prompt build) */
+let learnedTaxTypes: Array<{ name: string; tax_type: string }> = []
+
+/** Injects learned tax types from inventory_items into the module — called before prompt build */
+export function setLearnedTaxTypes(items: Array<{ name: string; tax_type: string }>) {
+  learnedTaxTypes = items
+}
+
 /**
  * Builds the AI extraction system prompt, injecting:
  * - The full inventory item list (for exact ItemCode + AccountCode matching)
  * - The chart of accounts (for fallback account selection)
- * AI returns per-line tax_type: "NONE" (GST-free) or "INPUT2" (GST on Expenses)
+ * - Learned tax types from previous invoice confirmations
+ * AI returns per-line tax_type: "NONE", "INPUT2", or "BASEXCLUDED"
  */
 function buildExtractionPrompt(): string {
   // Minify reference arrays — compact JSON without extra spaces
@@ -48,9 +57,14 @@ function buildExtractionPrompt(): string {
     }))
   )
 
+  // Minify learned tax types — confirmed by user on previous invoices
+  const learnedJson = learnedTaxTypes.length > 0
+    ? JSON.stringify(learnedTaxTypes.map(i => ({ n: i.name, t: i.tax_type })))
+    : '[]'
+
   return `You are an expert Xero Accounts Payable data extraction bot for Cocoa Café.
 
-I am providing you with our exact Xero Inventory Item list and Chart of Accounts.
+I am providing you with our exact Xero Inventory Item list, Chart of Accounts, and a list of previously confirmed tax types for known items.
 
 INVENTORY ITEMS (fields: c=ItemCode, n=ItemName, d=PurchasesDescription, a=PurchasesAccount, t=PurchasesTaxRate):
 ${inventoryJson}
@@ -58,16 +72,25 @@ ${inventoryJson}
 CHART OF ACCOUNTS — expense/cost accounts only (fields: c=Code, n=Name, t=TaxCode):
 ${coaJson}
 
+PREVIOUSLY CONFIRMED TAX TYPES (fields: n=ItemName, t=TaxType — these were manually confirmed by staff and MUST take priority over other rules):
+${learnedJson}
+
 
 INSTRUCTIONS:
 
 This is a café in Australia. All amounts on invoices are GST-inclusive (tax included in the price).
 LineAmountTypes will always be "Inclusive" in Xero — you must set the correct TaxType PER LINE ITEM.
 
-GST RULES FOR AUSTRALIAN CAFÉS:
-- Most food and basic beverages are GST-FREE → tax_type: "NONE"
-- GST APPLIES (10%) to: alcohol, equipment, non-food supplies, some packaging, cleaning chemicals, carbonated drinks, confectionery → tax_type: "INPUT2"
-- When in doubt for food/beverage items, default to "NONE" (GST-free)
+TAX TYPE RULES — THREE CATEGORIES:
+1. INPUT2 — GST on Expenses (10%): alcohol, equipment, packaging, non-food supplies, cleaning chemicals, carbonated/soft drinks, confectionery, electrical, plumbing
+2. NONE — GST Free: most food ingredients, basic beverages (milk, juice), coffee beans, tea, flour, sugar, fruit, vegetables, bread, meat, dairy
+3. BASEXCLUDED — BAS Excluded: bank fees, merchant fees, wages, superannuation, insurance premiums, government charges, donations, interest
+
+PRIORITY ORDER for determining tax_type:
+1. FIRST check the "Previously Confirmed Tax Types" list above — if the item name closely matches, use that tax_type (these are user-confirmed and override all other rules)
+2. THEN check the Inventory Items list "t" (PurchasesTaxRate) field
+3. FINALLY apply the tax type rules above based on what the item actually is
+4. When genuinely uncertain, default to "NONE" for food/beverage items
 
 For each line item on the invoice:
 
@@ -76,13 +99,13 @@ For each line item on the invoice:
 2. If an inventory match is found:
    - Set inventory_item_code to the exact "c" (ItemCode) value
    - Set account_code to the exact "a" (PurchasesAccount) value
-   - Check the "t" (PurchasesTaxRate) field — if it contains "GST" or "INPUT2", set tax_type to "INPUT2"; if it contains "Free" or "NONE", set tax_type to "NONE"
+   - Determine tax_type using the priority order above
 
 3. If no inventory match is found:
    - Leave inventory_item_code as empty string — do NOT invent a code
    - Select the most appropriate account_code from the Chart of Accounts based on the expense category
    - Prefer account 310 (Cost of Goods Sold) for food/beverage supplies, 408 (Cleaning) for cleaning products, 429 (General Expenses) when unsure
-   - Determine tax_type per the GST rules above based on what the item actually is
+   - Determine tax_type using the priority order above
 
 4. Extract invoice header fields:
    - supplier_name: exactly as shown on the invoice
@@ -98,7 +121,7 @@ For each line item on the invoice:
    - unit_amount: price per unit AS SHOWN on the invoice (GST-inclusive — do not adjust)
    - account_code: from inventory match or COA lookup (string)
    - inventory_item_code: exact ItemCode from inventory match, or empty string
-   - tax_type: "NONE" for GST-free items, "INPUT2" for GST-applicable items (per the rules above)
+   - tax_type: "INPUT2" for GST items, "NONE" for GST-free items, "BASEXCLUDED" for BAS-excluded items
 
 Return ONLY a valid JSON object using this exact structure — no preamble, no markdown, no explanation:
 {
@@ -115,7 +138,7 @@ Return ONLY a valid JSON object using this exact structure — no preamble, no m
       "unit_amount": number,
       "account_code": "string",
       "inventory_item_code": "string",
-      "tax_type": "NONE" | "INPUT2"
+      "tax_type": "NONE" | "INPUT2" | "BASEXCLUDED"
     }
   ]
 }`
@@ -319,7 +342,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
-  // Build the prompt with reference data injected
+  // Load learned tax types from inventory_items table (confirmed by users on previous invoices)
+  const { data: learnedItems } = await adminSupabase
+    .from('inventory_items')
+    .select('name, default_tax_type')
+    .eq('is_active', true)
+
+  setLearnedTaxTypes(
+    (learnedItems ?? []).map(i => ({ name: i.name, tax_type: i.default_tax_type }))
+  )
+
+  // Build the prompt with reference data + learned tax types injected
   const prompt = buildExtractionPrompt()
 
   let result: Record<string, unknown>

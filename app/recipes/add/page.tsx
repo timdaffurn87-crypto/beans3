@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/ui/Toast'
-import type { Recipe, Ingredient } from '@/lib/types'
+import type { Recipe, Ingredient, InventoryItem } from '@/lib/types'
 
 type Category = Recipe['category']
 
@@ -19,6 +19,23 @@ export default function AddRecipePage() {
   const [name, setName] = useState('')
   const [category, setCategory] = useState<Category>('coffee')
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ name: '', quantity: '', unit: '' }])
+
+  // Inventory items for autocomplete suggestions on ingredient names
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
+
+  /** Load inventory items for ingredient name suggestions */
+  useEffect(() => {
+    async function loadInventory() {
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('inventory_items')
+        .select('*')
+        .eq('is_active', true)
+        .order('name')
+      setInventoryItems((data as InventoryItem[]) ?? [])
+    }
+    loadInventory()
+  }, [])
   const [method, setMethod] = useState<string[]>([''])
   const [notes, setNotes] = useState('')
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -53,9 +70,23 @@ export default function AddRecipePage() {
     setIngredients(prev => [...prev, { name: '', quantity: '', unit: '' }])
   }
 
-  /** Update a field on an ingredient row by index */
+  /** Update a field on an ingredient row by index.
+   *  When the name matches an inventory item, auto-fill the unit of measure. */
   function updateIngredient(index: number, field: keyof Ingredient, value: string) {
-    setIngredients(prev => prev.map((ing, i) => i === index ? { ...ing, [field]: value } : ing))
+    setIngredients(prev => prev.map((ing, i) => {
+      if (i !== index) return ing
+      const updated = { ...ing, [field]: value }
+
+      // Auto-fill unit from inventory when the name matches
+      if (field === 'name') {
+        const match = inventoryItems.find(inv => inv.name.toLowerCase() === value.toLowerCase())
+        if (match && match.unit_of_measure) {
+          updated.unit = match.unit_of_measure
+        }
+      }
+
+      return updated
+    }))
   }
 
   /** Remove an ingredient row */
@@ -108,8 +139,13 @@ export default function AddRecipePage() {
         photoUrl = await uploadPhoto(photoFile)
       }
 
-      // Filter out empty ingredients and steps
-      const cleanedIngredients = ingredients.filter(i => i.name.trim())
+      // Filter out empty ingredients and steps, link to inventory items where possible
+      const cleanedIngredients = ingredients
+        .filter(i => i.name.trim())
+        .map(ing => {
+          const match = inventoryItems.find(inv => inv.name.toLowerCase() === ing.name.toLowerCase())
+          return { ...ing, inventory_item_id: match?.id ?? undefined }
+        })
       const cleanedMethod = method.filter(s => s.trim())
 
       const { error } = await supabase.from('recipes').insert({
@@ -242,6 +278,7 @@ export default function AddRecipePage() {
                 <div className="flex items-center gap-2">
                   <input
                     type="text"
+                    list="inventory-suggestions"
                     value={ing.name}
                     onChange={e => updateIngredient(i, 'name', e.target.value)}
                     placeholder="Ingredient name"
@@ -275,6 +312,13 @@ export default function AddRecipePage() {
               </div>
             ))}
           </div>
+
+          {/* Datalist for inventory item name suggestions */}
+          <datalist id="inventory-suggestions">
+            {inventoryItems.map(inv => (
+              <option key={inv.id} value={inv.name} />
+            ))}
+          </datalist>
         </div>
 
         {/* Method */}

@@ -9,9 +9,9 @@
 //   2. Pushes the invoice as a DRAFT ACCPAY bill
 //   3. Marks xero_sync_status = 'synced' or 'failed'
 //
-// GST is handled entirely by Xero's chart of accounts — we always send
-// LineAmountTypes=EXCLUSIVE and let Xero apply the correct tax rate per
-// account code. No GST review/flagging in Beans.
+// GST is handled per line item — we send LineAmountTypes=Inclusive and each
+// line carries its own TaxType (INPUT2, NONE, or BASEXCLUDED).
+// Xero calculates GST from the inclusive amount for INPUT2 lines.
 //
 // Cron schedule: 0 5 * * *
 // =============================================================================
@@ -270,9 +270,9 @@ Deno.serve(async (_req: Request) => {
 
 /**
  * Maps a Beans invoice to a Xero ACCPAY bill payload.
- * Always sends LineAmountTypes=Exclusive — Xero applies the correct tax
- * rate automatically based on the chart of accounts (account code).
- * We do not send ItemCode — supplier codes are not Xero inventory codes.
+ * Sends LineAmountTypes=Inclusive — all amounts include GST where applicable.
+ * Each line carries its own TaxType: INPUT2 (GST), NONE (GST-free), or BASEXCLUDED.
+ * Xero calculates the GST component from inclusive amounts for INPUT2 lines.
  */
 function mapToXeroInvoice(inv: Record<string, unknown>, contactId: string): Record<string, unknown> {
   const lineItems = (inv.line_items as Array<{
@@ -314,6 +314,16 @@ const XERO_CSV_HEADERS = [
   'Currency',
 ]
 
+/** Maps internal tax_type codes to Xero CSV TaxType display names */
+function taxTypeToXeroCsvLabel(taxType: string): string {
+  switch (taxType) {
+    case 'INPUT2':      return 'GST on Expenses'
+    case 'BASEXCLUDED': return 'BAS Excluded'
+    case 'NONE':        return 'GST Free Expenses'
+    default:            return 'GST Free Expenses'
+  }
+}
+
 function buildXeroCsv(invoices: Record<string, unknown>[]): string {
   function csvCell(value: string | number | null | undefined): string {
     const str = value === null || value === undefined ? '' : String(value)
@@ -326,7 +336,7 @@ function buildXeroCsv(invoices: Record<string, unknown>[]): string {
 
   for (const inv of invoices) {
     const lineItems = inv.line_items as Array<{
-      description: string; quantity: number; unit_amount: number; account_code?: string
+      description: string; quantity: number; unit_amount: number; account_code?: string; tax_type?: string
     }>
     for (const item of lineItems) {
       rows.push([
@@ -340,7 +350,7 @@ function buildXeroCsv(invoices: Record<string, unknown>[]): string {
         csvCell(item.quantity),
         csvCell(item.unit_amount),
         csvCell(item.account_code || '310'),
-        'GST on Expenses',
+        csvCell(taxTypeToXeroCsvLabel(item.tax_type || 'NONE')),
         '', '', '', '',
         'AUD',
       ].join(','))

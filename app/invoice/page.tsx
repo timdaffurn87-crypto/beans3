@@ -9,7 +9,7 @@ import { getCurrentCafeDay } from '@/lib/cafe-day'
 import { formatCurrency, formatTime, formatDisplayDate } from '@/lib/utils'
 import { useToast } from '@/components/ui/Toast'
 import { logActivity } from '@/lib/activity'
-import type { Invoice, LineItem } from '@/lib/types'
+import type { Invoice, LineItem, TaxType } from '@/lib/types'
 
 /** Converts a File object to a base64 string for the AI API */
 async function fileToBase64(file: File): Promise<string> {
@@ -33,7 +33,7 @@ function addDays(dateStr: string, days: number): string {
 
 /** A blank line item with Xero defaults — most café items are GST-free food */
 function blankLineItem(): LineItem {
-  return { description: '', quantity: 1, unit_amount: 0, account_code: '300', inventory_item_code: '', tax_type: 'NONE' }
+  return { description: '', quantity: 1, unit_amount: 0, account_code: '300', inventory_item_code: '', tax_type: 'NONE' as TaxType }
 }
 
 // ─── Design tokens (Design tokens for this screen) ─────────────────────
@@ -319,6 +319,22 @@ export default function InvoicePage() {
       })
 
       if (error) { showToast(error.message, 'error'); return }
+
+      // Upsert line items into inventory_items table (learns tax types + tracks prices)
+      try {
+        await fetch('/api/inventory/upsert', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            invoice_id: null, // We don't have the invoice ID here — upsert still works
+            supplier_name: supplierName.trim(),
+            line_items: lineItems,
+          }),
+        })
+      } catch {
+        // Non-fatal — invoice is already saved, inventory sync is a bonus
+        console.warn('Inventory upsert failed (non-fatal)')
+      }
 
       showToast('Invoice saved', 'success')
       await logActivity(profile.id, 'invoice_scanned', `Invoice from ${supplierName.trim()}`, totalAmount)
@@ -836,18 +852,26 @@ export default function InvoicePage() {
                           style={{ borderColor: CI.outlineVar, color: CI.onSurface }} />
                       </div>
                       <div className="flex flex-col gap-0.5">
-                        <label className="text-xs" style={{ color: CI.tertiary }}>GST</label>
-                        <button
-                          type="button"
-                          onClick={() => updateLineItem(index, 'tax_type', item.tax_type === 'INPUT2' ? 'NONE' : 'INPUT2')}
-                          className="px-3 py-2 rounded-lg border text-sm font-semibold text-center transition-colors"
+                        <label className="text-xs" style={{ color: CI.tertiary }}>Tax Type</label>
+                        <select
+                          value={item.tax_type}
+                          onChange={e => updateLineItem(index, 'tax_type', e.target.value as TaxType)}
+                          className="px-2 py-2 rounded-lg border text-sm font-semibold appearance-none bg-white focus:outline-none focus:ring-2"
                           style={{
-                            borderColor: item.tax_type === 'INPUT2' ? CI.primary : CI.outlineVar,
-                            backgroundColor: item.tax_type === 'INPUT2' ? 'rgba(41,104,97,0.1)' : 'white',
-                            color: item.tax_type === 'INPUT2' ? CI.primary : CI.tertiary,
+                            borderColor: item.tax_type === 'INPUT2' ? CI.primary
+                              : item.tax_type === 'BASEXCLUDED' ? CI.secondary
+                              : CI.outlineVar,
+                            backgroundColor: item.tax_type === 'INPUT2' ? 'rgba(41,104,97,0.1)'
+                              : item.tax_type === 'BASEXCLUDED' ? 'rgba(124,87,37,0.1)'
+                              : 'white',
+                            color: item.tax_type === 'INPUT2' ? CI.primary
+                              : item.tax_type === 'BASEXCLUDED' ? CI.secondary
+                              : CI.tertiary,
                           }}>
-                          {item.tax_type === 'INPUT2' ? '10% GST' : 'No GST'}
-                        </button>
+                          <option value="NONE">GST Free</option>
+                          <option value="INPUT2">10% GST</option>
+                          <option value="BASEXCLUDED">BAS Excluded</option>
+                        </select>
                       </div>
                     </div>
                   </div>
