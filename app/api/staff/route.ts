@@ -71,7 +71,9 @@ export async function POST(request: Request) {
     email_confirm: true,
   })
 
-  if (authError?.message?.toLowerCase().includes('already been registered')) {
+  const isEmailTaken = authError?.message?.toLowerCase().includes('already') &&
+    (authError.message.toLowerCase().includes('registered') || authError.message.toLowerCase().includes('used') || authError.message.toLowerCase().includes('exists'))
+  if (isEmailTaken) {
     // Find and delete the orphaned auth user, then retry
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
     const staleUser = existingUsers?.users?.find(u => u.email === dummyEmail)
