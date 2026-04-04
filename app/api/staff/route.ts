@@ -59,24 +59,38 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'PIN already in use' }, { status: 409 })
   }
 
-  // Proactively clean up any orphaned Supabase Auth user for this PIN's dummy
-  // email. This can happen when a previous staff creation attempt succeeded in
-  // creating the auth user but then failed at the profile insert step (e.g. a
-  // database constraint error), leaving a stale auth user with no profile.
+  // Create auth user for PIN-based login. Uses a dummy email pattern.
+  // If an orphaned auth user exists from a previous failed attempt, we detect
+  // it via signInWithPassword, delete it, then retry createUser.
   const dummyEmail = `pin${pin}@beans.local`
 
-  const { data: userList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
-  const staleAuthUser = userList?.users?.find(u => u.email === dummyEmail)
-  if (staleAuthUser) {
-    await supabaseAdmin.auth.admin.deleteUser(staleAuthUser.id)
-  }
-
-  // Create the auth user fresh
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  let { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: dummyEmail,
     password: pin,
     email_confirm: true,
   })
+
+  // If creation failed (likely "email already registered"), find and remove
+  // the orphaned auth user by signing in with the known credentials to get its ID
+  if (authError) {
+    const { data: signInData } = await supabaseAdmin.auth.signInWithPassword({
+      email: dummyEmail,
+      password: pin,
+    })
+
+    if (signInData?.user) {
+      // Found the orphan — delete it and retry creation
+      await supabaseAdmin.auth.admin.deleteUser(signInData.user.id)
+      const retry = await supabaseAdmin.auth.admin.createUser({
+        email: dummyEmail,
+        password: pin,
+        email_confirm: true,
+      })
+      authUser = retry.data
+      authError = retry.error
+    }
+    // If sign-in also failed, the original createUser error stands
+  }
 
   if (authError || !authUser.user) {
     return NextResponse.json({ error: authError?.message || 'Auth creation failed' }, { status: 500 })
