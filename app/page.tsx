@@ -77,12 +77,10 @@ function DashboardHeader({
   name,
   xeroConnected,
   onLogOut,
-  showMenu = false,
 }: {
   name: string
   xeroConnected: boolean
   onLogOut: () => void
-  showMenu?: boolean
 }) {
   return (
     <div className="px-5 pt-12 pb-2 flex items-center justify-between">
@@ -106,18 +104,9 @@ function DashboardHeader({
             title="Xero connected"
           />
         )}
-        <button className="text-gray-400">
-          <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>notifications</span>
+        <button onClick={onLogOut} className="text-gray-400">
+          <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>logout</span>
         </button>
-        {showMenu ? (
-          <button className="text-gray-400">
-            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>menu</span>
-          </button>
-        ) : (
-          <button onClick={onLogOut} className="text-gray-400">
-            <span className="material-symbols-outlined" style={{ fontSize: '22px' }}>logout</span>
-          </button>
-        )}
       </div>
     </div>
   )
@@ -217,7 +206,7 @@ function OwnerDashboard({
 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
-      <DashboardHeader name={name} xeroConnected={xeroConnected} onLogOut={onLogOut} showMenu />
+      <DashboardHeader name={name} xeroConnected={xeroConnected} onLogOut={onLogOut} />
 
       {/* ── Heading ── */}
       <div className="px-5 pt-4 pb-2">
