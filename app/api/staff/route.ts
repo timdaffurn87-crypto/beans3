@@ -42,52 +42,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'PIN must be 4–6 digits' }, { status: 400 })
   }
 
-  // Check PIN is not already taken
   const supabaseAdmin = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   )
 
-  const { data: existing } = await supabaseAdmin
+  // Check PIN is not already taken in profiles
+  const { data: existingProfile } = await supabaseAdmin
     .from('profiles')
     .select('id')
     .eq('pin', pin)
     .single()
 
-  if (existing) {
+  if (existingProfile) {
     return NextResponse.json({ error: 'PIN already in use' }, { status: 409 })
   }
 
-  // Create auth user. If creation fails because the dummy email already exists
-  // (e.g. from a partially-failed previous attempt where the profile insert
-  // failed but the auth user was created), clean up the orphaned auth user
-  // and retry once.
+  // Proactively clean up any orphaned Supabase Auth user for this PIN's dummy
+  // email. This can happen when a previous staff creation attempt succeeded in
+  // creating the auth user but then failed at the profile insert step (e.g. a
+  // database constraint error), leaving a stale auth user with no profile.
   const dummyEmail = `pin${pin}@beans.local`
 
-  let { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  const { data: userList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 })
+  const staleAuthUser = userList?.users?.find(u => u.email === dummyEmail)
+  if (staleAuthUser) {
+    await supabaseAdmin.auth.admin.deleteUser(staleAuthUser.id)
+  }
+
+  // Create the auth user fresh
+  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email: dummyEmail,
     password: pin,
     email_confirm: true,
   })
-
-  const isEmailTaken = authError?.message?.toLowerCase().includes('already') &&
-    (authError.message.toLowerCase().includes('registered') || authError.message.toLowerCase().includes('used') || authError.message.toLowerCase().includes('exists'))
-  if (isEmailTaken) {
-    // Find and delete the orphaned auth user, then retry
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-    const staleUser = existingUsers?.users?.find(u => u.email === dummyEmail)
-    if (staleUser) {
-      await supabaseAdmin.auth.admin.deleteUser(staleUser.id)
-    }
-    const retry = await supabaseAdmin.auth.admin.createUser({
-      email: dummyEmail,
-      password: pin,
-      email_confirm: true,
-    })
-    authUser = retry.data
-    authError = retry.error
-  }
 
   if (authError || !authUser.user) {
     return NextResponse.json({ error: authError?.message || 'Auth creation failed' }, { status: 500 })
