@@ -59,12 +59,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'PIN already in use' }, { status: 409 })
   }
 
-  // Create auth user
-  const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email: `pin${pin}@beans.local`,
+  // Create auth user. If creation fails because the dummy email already exists
+  // (e.g. from a partially-failed previous attempt where the profile insert
+  // failed but the auth user was created), clean up the orphaned auth user
+  // and retry once.
+  const dummyEmail = `pin${pin}@beans.local`
+
+  let { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    email: dummyEmail,
     password: pin,
     email_confirm: true,
   })
+
+  if (authError?.message?.toLowerCase().includes('already been registered')) {
+    // Find and delete the orphaned auth user, then retry
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const staleUser = existingUsers?.users?.find(u => u.email === dummyEmail)
+    if (staleUser) {
+      await supabaseAdmin.auth.admin.deleteUser(staleUser.id)
+    }
+    const retry = await supabaseAdmin.auth.admin.createUser({
+      email: dummyEmail,
+      password: pin,
+      email_confirm: true,
+    })
+    authUser = retry.data
+    authError = retry.error
+  }
 
   if (authError || !authUser.user) {
     return NextResponse.json({ error: authError?.message || 'Auth creation failed' }, { status: 500 })
