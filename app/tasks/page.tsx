@@ -31,7 +31,7 @@ function stationDisplayName(station: string): string {
 /** Daily Tasks page — all roles complete tasks, manager/owner access template editor */
 export default function TasksPage() {
   const { profile, loading } = useAuth()
-  const { isManager, isOwner } = useRole()
+  const { isManager, isOwner, isKitchen } = useRole()
   const router = useRouter()
   const { showToast } = useToast()
 
@@ -147,12 +147,15 @@ export default function TasksPage() {
     )
   }
 
-  const completedCount = tasks.filter(t => t.completed_at).length
-  const totalCount = tasks.length
+  // Kitchen role only sees kitchen station tasks
+  const visibleTasks = isKitchen ? tasks.filter(t => t.station === 'kitchen') : tasks
+
+  const completedCount = visibleTasks.filter(t => t.completed_at).length
+  const totalCount = visibleTasks.length
   const progressPct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0
 
   // Group tasks by station, preserving order from the query
-  const stations = Array.from(new Set(tasks.map(t => t.station)))
+  const stations = Array.from(new Set(visibleTasks.map(t => t.station)))
 
   /** Look up a staff name from the fetched profiles array */
   function staffName(id: string | null): string {
@@ -248,7 +251,7 @@ export default function TasksPage() {
 
         {/* Tasks grouped by station */}
         {!generating && !loadingTasks && stations.map(station => {
-          const stationTasks = tasks.filter(t => t.station === station)
+          const stationTasks = visibleTasks.filter(t => t.station === station)
           return (
             <div key={station}>
               {/* Station header with left bar accent */}

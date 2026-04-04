@@ -9,6 +9,7 @@ export function useRole() {
   return {
     role: profile?.role ?? null,
     isBarista: profile?.role === 'barista',
+    isKitchen: profile?.role === 'kitchen',
     isManager: profile?.role === 'manager' || profile?.role === 'owner',
     isOwner: profile?.role === 'owner',
   }

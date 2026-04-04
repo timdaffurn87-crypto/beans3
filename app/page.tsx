@@ -45,6 +45,7 @@ function initials(name: string): string {
 function roleLabel(role: string): string {
   if (role === 'owner') return 'Owner'
   if (role === 'manager') return 'Manager'
+  if (role === 'kitchen') return 'Kitchen'
   return 'Barista'
 }
 

@@ -45,7 +45,7 @@ export default function AddRecipePage() {
   // Auth guard — redirect baristas to home
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
-    if (!loading && profile && profile.role === 'barista') router.push('/')
+    if (!loading && profile && (profile.role === 'barista' || profile.role === 'kitchen')) router.push('/')
   }, [profile, loading, router])
 
   /** Handle photo selected for upload */

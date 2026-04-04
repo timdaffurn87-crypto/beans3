@@ -3,11 +3,17 @@
 import Link from 'next/link'
 import { useAuth } from '@/hooks/useAuth'
 
-const items = [
+/** Items visible to barista / manager / owner (FOH roles) */
+const fohItems = [
   { href: '/my-roster', label: 'My Roster', desc: 'View your upcoming shifts', icon: '📅' },
   { href: '/invoice', label: 'Scan Invoice', desc: 'Capture delivery receipts', icon: '📄' },
   { href: '/recipes', label: 'Recipe Book', desc: 'Browse recipes', icon: '📖' },
   { href: '/eod', label: 'End of Day', desc: 'Submit shift report', icon: '🌙' },
+]
+
+/** Items visible to kitchen role */
+const kitchenItems = [
+  { href: '/my-roster', label: 'My Roster', desc: 'View your upcoming shifts', icon: '📅' },
 ]
 
 const managerItems = [
@@ -21,6 +27,8 @@ const managerItems = [
 export default function MorePage() {
   const { profile } = useAuth()
   const isManager = profile?.role === 'manager' || profile?.role === 'owner'
+  const isKitchen = profile?.role === 'kitchen'
+  const items = isKitchen ? kitchenItems : fohItems
 
   return (
     <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>

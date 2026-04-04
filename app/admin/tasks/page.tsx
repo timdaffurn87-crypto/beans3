@@ -35,7 +35,7 @@ export default function TaskTemplatesPage() {
   // Auth guard — baristas cannot access this page
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
-    if (!loading && profile && profile.role === 'barista') router.push('/')
+    if (!loading && profile && (profile.role === 'barista' || profile.role === 'kitchen')) router.push('/')
   }, [profile, loading, router])
 
   /** Fetch all active task templates ordered by station then sort_order */

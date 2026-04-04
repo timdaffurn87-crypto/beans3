@@ -1,4 +1,4 @@
-export type Role = 'barista' | 'manager' | 'owner'
+export type Role = 'barista' | 'kitchen' | 'manager' | 'owner'
 
 export interface Profile {
   id: string

@@ -53,7 +53,7 @@ export default function SettingsPage() {
   // Auth guard
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
-    if (!loading && profile && profile.role === 'barista') router.push('/')
+    if (!loading && profile && (profile.role === 'barista' || profile.role === 'kitchen')) router.push('/')
   }, [profile, loading, router])
 
   async function fetchStaff() {
@@ -660,7 +660,7 @@ function AddStaffForm({
   isOwner: boolean
 }) {
   const [name, setName] = useState('')
-  const [role, setRole] = useState<'barista' | 'manager' | 'owner'>('barista')
+  const [role, setRole] = useState<'barista' | 'kitchen' | 'manager' | 'owner'>('barista')
   const [pin, setPin] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -704,10 +704,11 @@ function AddStaffForm({
         <label className="text-sm font-medium text-gray-700">Role</label>
         <select
           value={role}
-          onChange={e => setRole(e.target.value as 'barista' | 'manager' | 'owner')}
+          onChange={e => setRole(e.target.value as 'barista' | 'kitchen' | 'manager' | 'owner')}
           className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
         >
           <option value="barista">Barista</option>
+          <option value="kitchen">Kitchen</option>
           <option value="manager">Manager</option>
           {isOwner && <option value="owner">Owner</option>}
         </select>
@@ -778,6 +779,8 @@ function StaffCard({
       ? 'bg-[#B8960C]/10 text-[#B8960C]'
       : member.role === 'manager'
       ? 'bg-blue-50 text-blue-600'
+      : member.role === 'kitchen'
+      ? 'bg-orange-50 text-orange-600'
       : 'bg-gray-100 text-gray-500'
 
   async function handleUpdate() {
@@ -867,6 +870,7 @@ function StaffCard({
             className="px-4 py-3 rounded-xl bg-[#f1ede7] border-0 border-b-2 border-transparent text-base focus:outline-none focus:border-[#296861]"
           >
             <option value="barista">Barista</option>
+            <option value="kitchen">Kitchen</option>
             <option value="manager">Manager</option>
             {isOwner && <option value="owner">Owner</option>}
           </select>

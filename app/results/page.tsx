@@ -80,7 +80,7 @@ export default function ResultsPage() {
   // Auth guard — baristas cannot access this page
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
-    if (!loading && profile && profile.role === 'barista') router.push('/')
+    if (!loading && profile && (profile.role === 'barista' || profile.role === 'kitchen')) router.push('/')
   }, [profile, loading, router])
 
   /** Fetch EOD reports and targets for the last 7 café days */

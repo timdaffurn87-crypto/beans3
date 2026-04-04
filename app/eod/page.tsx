@@ -183,9 +183,10 @@ export default function EODPage() {
   // Captured after submit so the success screen can show the right message
   const [submittedBalanced, setSubmittedBalanced] = useState<boolean | null>(null)
 
-  // Auth guard
+  // Auth guard — kitchen staff don't use EOD
   useEffect(() => {
     if (!loading && !profile) router.push('/login')
+    if (!loading && profile && profile.role === 'kitchen') router.push('/')
   }, [profile, loading, router])
 
   /** Load all café-day data needed for the EOD summary */
