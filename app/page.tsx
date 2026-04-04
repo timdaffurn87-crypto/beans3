@@ -625,6 +625,207 @@ function ManagerDashboard({
   )
 }
 
+// ─── KITCHEN DASHBOARD ───────────────────────────────────────────────────────
+
+function KitchenDashboard({
+  data,
+  xeroConnected,
+  name,
+  cafeDay,
+  onLogOut,
+}: {
+  data: DashboardData
+  xeroConnected: boolean
+  name: string
+  cafeDay: string
+  onLogOut: () => void
+}) {
+  const firstName = name.split(' ')[0]
+  const greeting  = getGreeting()
+  const progress  = shiftProgress()
+
+  // Only count kitchen-station tasks for this role's view
+  const kitchenTasks       = data.recentTasks.filter(t => t.station === 'kitchen')
+  const kitchenCompleted   = kitchenTasks.filter(t => t.completed_at).length
+  const kitchenTotal       = kitchenTasks.length
+  const kitchenPct         = kitchenTotal > 0 ? Math.round((kitchenCompleted / kitchenTotal) * 100) : 0
+  const hasIncompleteTasks = kitchenTotal > 0 && kitchenCompleted < kitchenTotal
+
+  // Show the 2pm task reminder popup when it's at or past 14:00 and tasks remain
+  const [reminderDismissed, setReminderDismissed] = useState(false)
+  const now        = getNowAEST()
+  const isPast2pm  = now.getHours() >= 14
+  const showReminder = isPast2pm && hasIncompleteTasks && !reminderDismissed
+
+  return (
+    <div className="min-h-screen pb-24" style={{ backgroundColor: '#FAF8F3' }}>
+      <DashboardHeader name={name} xeroConnected={xeroConnected} onLogOut={onLogOut} />
+
+      {/* ── 2pm task reminder popup ── */}
+      {showReminder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4" style={{ backgroundColor: '#FFF8E7' }}>
+              <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '26px', fontVariationSettings: "'FILL' 1" }}>alarm</span>
+            </div>
+            <h2 className="text-xl font-bold mb-1" style={{ color: '#2D2D2D' }}>Tasks Not Complete</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              It&apos;s past 2pm and you still have{' '}
+              <span className="font-semibold" style={{ color: '#B8960C' }}>
+                {kitchenTotal - kitchenCompleted} kitchen task{kitchenTotal - kitchenCompleted !== 1 ? 's' : ''}
+              </span>{' '}
+              to finish before end of shift.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setReminderDismissed(true)}
+                className="flex-1 py-3 rounded-2xl border border-gray-200 text-sm font-semibold text-gray-500"
+              >
+                Dismiss
+              </button>
+              <a
+                href="/tasks"
+                className="flex-1 py-3 rounded-2xl text-center text-sm font-semibold text-white"
+                style={{ background: 'linear-gradient(135deg, #296861 0%, #73b0a8 100%)' }}
+              >
+                Go to Tasks
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Greeting ── */}
+      <div className="px-5 pt-4 pb-3">
+        <p className="section-label mb-1" style={{ color: '#296861' }}>Kitchen</p>
+        <h1 className="text-4xl font-bold leading-tight" style={{ color: '#2D2D2D' }}>
+          {greeting},{' '}
+          <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic', display: 'block' }}>
+            {firstName}.
+          </span>
+        </h1>
+      </div>
+
+      <div className="px-5 space-y-4">
+
+        {/* ── Shift Progress ── */}
+        <div className="bg-white rounded-2xl p-4 card-interactive">
+          <p className="section-label mb-1">Shift Progress</p>
+          <div className="flex items-end gap-1">
+            <p className="text-5xl font-bold" style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', color: '#2D2D2D' }}>
+              {progress}
+            </p>
+            <p className="text-2xl font-semibold mb-1 text-gray-400">%</p>
+          </div>
+          <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full rounded-full transition-all duration-700"
+              style={{ width: `${progress}%`, background: 'linear-gradient(90deg, #296861 0%, #73b0a8 100%)' }}
+            />
+          </div>
+        </div>
+
+        {/* ── Today's date ── */}
+        <div className="bg-white rounded-2xl px-4 py-3 flex items-center gap-3">
+          <span className="material-symbols-outlined text-gray-400" style={{ fontSize: '20px' }}>calendar_today</span>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#2D2D2D' }}>{formatDisplayDate(cafeDay)}</p>
+            <p className="text-xs text-gray-400">Kitchen Shift</p>
+          </div>
+        </div>
+
+        {/* ── Quick actions ── */}
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { href: '/waste',   icon: 'delete',     label: 'Log Waste' },
+            { href: '/tasks',   icon: 'checklist',  label: 'Tasks' },
+            { href: '/recipes', icon: 'menu_book',  label: 'Recipes' },
+          ].map(item => (
+            <a
+              key={item.href}
+              href={item.href}
+              className="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card-interactive"
+            >
+              <span className="material-symbols-outlined" style={{ color: '#296861', fontSize: '24px' }}>{item.icon}</span>
+              <p className="text-[11px] font-semibold text-center text-gray-500">{item.label}</p>
+            </a>
+          ))}
+        </div>
+
+        {/* ── Kitchen Tasks Checklist ── */}
+        <div className="bg-white rounded-2xl p-4 card-interactive">
+          <div className="flex items-baseline justify-between mb-1">
+            <p className="font-bold text-lg" style={{ color: '#2D2D2D' }}>
+              Kitchen{' '}
+              <span style={{ fontFamily: 'var(--font-newsreader), Georgia, serif', fontStyle: 'italic' }}>Tasks</span>
+            </p>
+            <p className="text-xs text-gray-400">{kitchenCompleted} of {kitchenTotal} done</p>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">Kitchen station tasks for today.</p>
+
+          {/* Progress bar */}
+          <div className="flex items-center justify-between mb-2">
+            <p className="section-label">Progress</p>
+            <p className="section-label" style={{ color: taskEffColour(kitchenPct) }}>{kitchenPct}%</p>
+          </div>
+          <div className="h-1 bg-gray-100 rounded-full overflow-hidden mb-3">
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${kitchenPct}%`, backgroundColor: taskEffColour(kitchenPct) }}
+            />
+          </div>
+
+          {kitchenTasks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-2">No kitchen tasks yet today</p>
+          ) : (
+            <div className="space-y-2">
+              {kitchenTasks.slice(0, 4).map(task => {
+                const done = !!task.completed_at
+                return (
+                  <div key={task.id} className="flex items-center gap-3">
+                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
+                      done ? 'border-[#296861]' : 'border-gray-300'
+                    }`} style={done ? { backgroundColor: '#296861' } : {}}>
+                      {done && <span className="material-symbols-outlined text-white" style={{ fontSize: '11px', fontVariationSettings: "'FILL' 1" }}>check</span>}
+                    </div>
+                    <p className={`text-sm font-medium flex-1 leading-tight ${done ? 'line-through text-gray-400' : ''}`} style={done ? {} : { color: '#2D2D2D' }}>
+                      {task.title}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {kitchenTotal > 0 && (
+            <a
+              href="/tasks"
+              className="mt-3 flex items-center justify-center gap-1 text-sm font-semibold"
+              style={{ color: '#296861' }}
+            >
+              Open full checklist
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_forward</span>
+            </a>
+          )}
+        </div>
+
+        {/* ── Waste summary ── */}
+        <div className="bg-white rounded-2xl px-4 py-4 flex items-center gap-4 card-interactive">
+          <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#FFF8E7' }}>
+            <span className="material-symbols-outlined" style={{ color: '#B8960C', fontSize: '22px' }}>delete</span>
+          </div>
+          <div className="flex-1">
+            <p className="section-label">Waste Today</p>
+            <p className="text-xl font-bold" style={{ color: '#2D2D2D' }}>{formatCurrency(data.wasteTotal)}</p>
+          </div>
+          <a href="/waste" className="text-sm font-semibold" style={{ color: '#296861' }}>Log →</a>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 // ─── STAFF / BARISTA DASHBOARD ────────────────────────────────────────────────
 
 function StaffDashboard({
@@ -802,7 +1003,7 @@ function StaffDashboard({
 /** Main dashboard — renders one of three role-specific views */
 export default function DashboardPage() {
   const { profile, loading } = useAuth()
-  const { isManager, isOwner } = useRole()
+  const { isManager, isOwner, isKitchen } = useRole()
   const router = useRouter()
 
   const [data, setData] = useState<DashboardData>({
@@ -910,6 +1111,10 @@ export default function DashboardPage() {
 
   if (isManager) {
     return <ManagerDashboard data={data} xeroConnected={xeroConnected} name={fullName} onLogOut={handleLogOut} />
+  }
+
+  if (isKitchen) {
+    return <KitchenDashboard data={data} xeroConnected={xeroConnected} name={fullName} cafeDay={cafeDay} onLogOut={handleLogOut} />
   }
 
   return <StaffDashboard data={data} xeroConnected={xeroConnected} name={fullName} cafeDay={cafeDay} onLogOut={handleLogOut} />
